@@ -19,7 +19,7 @@ A minimalist YouTube Downloader built with Qt, allowing users to easily download
 
 ### Steps to Install
 
-1. Download the installer from the [releases](link-to-your-releases) page.
+1. Download the installer from the [releases](https://github.com/Rinechxn/mdu-yt/releases) page.
 2. Run the installer.
 3. Follow the prompts to install the application to `C:\Users\<Username>\AppData\Local\kaoniewji\mduyoutube`.
 4. After installation, you can find the application in your Start Menu or on your Desktop.
