@@ -1,6 +1,7 @@
 import subprocess
 import os
 import zipfile
+import json
 from datetime import datetime
 
 def run_command(command):
@@ -20,7 +21,22 @@ def create_zip(source_dir, output_filename):
                 arcname = os.path.relpath(file_path, source_dir)
                 zipf.write(file_path, arcname)
 
+def create_buildnumber_json(version, build_id):
+    build_info = {
+        "version": version,
+        "time": datetime.now().isoformat(),
+        "build_id": build_id
+    }
+    with open("buildnumber.json", "w") as f:
+        json.dump(build_info, f, indent=2)
+
 def main():
+    # Create buildnumber.json
+    print("Creating buildnumber.json...")
+    version = "1.0.0"  # You may want to get this from a config file or as a parameter
+    build_id = datetime.now().strftime("%Y%m%d%H%M%S")
+    create_buildnumber_json(version, build_id)
+
     # Run setup.py build
     print("Running setup.py build...")
     run_command("python app.py build")
