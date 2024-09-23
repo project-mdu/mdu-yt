@@ -45,7 +45,7 @@ This project is licensed under the Unlicense License. See the [LICENSE](LICENSE)
 
 ## Contact
 
-For support or inquiries, please contact [Your Name](info.neixproducer@gmail.com).
+For support or inquiries, please contact [E-Mail](info.neixproducer@gmail.com).
 
 ## Acknowledgments
 
@@ -53,5 +53,5 @@ For support or inquiries, please contact [Your Name](info.neixproducer@gmail.com
 - [cx_Freeze](https://cx-freeze.readthedocs.io/en/latest/) for packaging the application
 
 ## Credit
-- [Yt-Dlp](https://github.com/yt-dlp/yt-dlp) A feature-rich command-line audio/video downloader
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) A feature-rich command-line audio/video downloader
 - [FFmpeg](https://www.ffmpeg.org/) A complete, cross-platform solution to record, convert and stream audio and video. Download Converting video and audio has never been so easy.
