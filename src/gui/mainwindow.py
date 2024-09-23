@@ -103,7 +103,6 @@ class MainWindow(QMainWindow):
         self.downloader.signals.progress.connect(self.update_progress)
         self.downloader.signals.error.connect(self.show_error)
         self.downloader.signals.finished.connect(self.download_finished)
-
         self.video_radio.toggled.connect(self.toggle_format_combo)
         self.audio_radio.toggled.connect(self.toggle_format_combo)
 

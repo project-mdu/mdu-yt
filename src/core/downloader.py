@@ -3,13 +3,13 @@ import re
 import subprocess
 import sys
 from PySide6.QtCore import QObject, Signal
+from env import bin
 
-workdir = os.path.join(os.path.dirname(__file__),'bin')
+workdir = bin + '\\bin'
 class DownloaderSignals(QObject):
     progress = Signal(float, str, str, str)
     error = Signal(str)
     finished = Signal(str, str, str)  # filename, file_path, file_type
-
 class Downloader(QObject):
     def __init__(self):
         super().__init__()
@@ -18,7 +18,7 @@ class Downloader(QObject):
     def download(self, url, is_audio, audio_format, resolution, fps, download_dir):
         try:
             # Construct the command with the working directory set to the bin directory
-            cmd = ['yt-dlp.exe', url, '--newline', '-P', download_dir]
+            cmd = [os.path.join(workdir, 'yt-dlp.exe'), url, '--newline', '-P', download_dir]
             if is_audio:
                 cmd.extend(['-x', '--audio-format', audio_format])
             else:
@@ -58,7 +58,7 @@ class Downloader(QObject):
                 self.signals.finished.emit(filename, file_path, file_type)
         except Exception as e:
             self.signals.error.emit(str(e))
-            print(os.path.join(os.path.dirname(__file__),".", 'bin'))
+            print(workdir)
 
     def parse_progress(self, line):
         progress = 0
