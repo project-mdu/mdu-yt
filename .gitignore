@@ -1,7 +1,6 @@
 installer
 build
-
-
+download_history.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

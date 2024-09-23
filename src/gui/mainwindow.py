@@ -2,29 +2,84 @@ import os
 import sys
 import json
 import threading
+import subprocess
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton, 
-                               QComboBox, QButtonGroup, QFileDialog, QMessageBox, QTableView, 
-                               QStyledItemDelegate, QStatusBar)
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
+                               QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView, 
+                               QStyledItemDelegate, QStatusBar, QStyle, QMenu)
+from PySide6.QtCore import Qt, Slot, QSize, QPoint
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
 from src.core.downloader import Downloader
 
-class EllipsisDelegate(QStyledItemDelegate):
-    def paint(self, painter, option, index):
-        text = index.data()
-        if text:
-            elided_text = option.fontMetrics.elidedText(text, Qt.ElideRight, option.rect.width())
-            painter.save()
-            painter.drawText(option.rect, Qt.AlignLeft | Qt.AlignVCenter, elided_text)
-            painter.restore()
+def normalize_path(path):
+    return path.replace(os.sep, '/')
 
+class HistoryItemWidget(QWidget):
+    def __init__(self, data, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
+        self.path_label = QLabel(normalize_path(data['path']))
+        icon = QIcon(self.get_icon_path(data['file_type']))
+        self.icon_label = QLabel()
+        self.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
+        layout.addWidget(self.icon_label)
+
+        info_layout = QVBoxLayout()
+        self.filename_label = QLabel(data['filename'])
+        self.filename_label.setStyleSheet("font-weight: bold;")
+        info_layout.addWidget(self.filename_label)
+
+        self.path_label = QLabel(data['path'])
+        self.path_label.setStyleSheet("color: gray;")
+        info_layout.addWidget(self.path_label)
+
+        layout.addLayout(info_layout)
+        layout.addStretch()
+
+        self.setObjectName("historyItem")
+        self.filename_label.setObjectName("filenameLabel")
+        self.path_label.setObjectName("pathLabel")
+
+    def get_icon_path(self, file_type):
+        if file_type == 'audio':
+            return ":/audio.ico"
+        elif file_type == 'video':
+            return ":/vid.ico"
+        else:
+            return ":/file.ico"
+
+class HistoryDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.alt_color1 = QColor(53, 53, 53)  # Darker gray
+        self.alt_color2 = QColor(45, 45, 45)  # Slightly lighter gray
+
+    def paint(self, painter, option, index):
+        if index.row() % 2 == 0:
+            painter.fillRect(option.rect, self.alt_color1)
+        else:
+            painter.fillRect(option.rect, self.alt_color2)
+
+        if not self.parent().indexWidget(index):
+            data = index.data(Qt.UserRole)
+            if data:
+                widget = HistoryItemWidget(data, self.parent())
+                self.parent().setIndexWidget(index, widget)
+
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, QColor(42, 130, 218))
+
+    def sizeHint(self, option, index):
+        return QSize(0, 50)
+    
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
         self.setWindowTitle("YouTube Downloader")
         self.setGeometry(100, 100, 800, 400)
+        self.setWindowIcon(QIcon(":/app.ico"))
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -68,7 +123,7 @@ class MainWindow(QMainWindow):
         self.folder_label = QLabel("Download folder:")
         folder_layout.addWidget(self.folder_label)
         self.folder_path = QLineEdit()
-        self.folder_path.setText(os.path.expanduser("~/Downloads"))
+        self.folder_path.setText(normalize_path(os.path.expanduser("~/Downloads")))
         folder_layout.addWidget(self.folder_path)
         self.folder_button = QPushButton("Browse")
         self.folder_button.clicked.connect(self.select_folder)
@@ -81,23 +136,38 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("Ready")
         layout.addWidget(self.status_label)
 
-
-        # Add status bar
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-
-        # Set a message in the status bar
         self.statusBar.showMessage("Developed by Nawapon Boonjua")
 
-        self.history_model = QStandardItemModel(0, 4, self)
-        self.history_model.setHorizontalHeaderLabels(["Filename", "Type", "Path", ""])
-        self.history_table = QTableView()
-        self.history_table.setModel(self.history_model)
-        self.history_table.setItemDelegate(EllipsisDelegate())
-        self.history_table.setShowGrid(False)
-        self.history_table.setSelectionBehavior(QTableView.SelectRows)
-        layout.addWidget(self.history_table)
-        self.history_table.horizontalHeader().setStretchLastSection(True)
+        self.history_model = QStandardItemModel()
+        self.history_list = QListView()
+        self.history_list.setModel(self.history_model)
+        self.history_list.setItemDelegate(HistoryDelegate(self.history_list))
+        self.history_list.setUniformItemSizes(False)
+        self.history_list.setSpacing(2)
+        self.history_list.doubleClicked.connect(self.open_file_location)
+        self.history_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.history_list.customContextMenuRequested.connect(self.show_context_menu)
+        self.history_list.setStyleSheet("""
+            QListView {
+                background-color: #2b2b2b;
+                border: none;
+            }
+            QListView::item {
+                border: none;
+                padding: 2px;
+            }
+            QListView::item:selected {
+                background-color: #2a82da;
+                color: white;
+            }
+        """)
+        layout.addWidget(self.history_list)
+
+        self.clear_history_button = QPushButton("Clear History")
+        self.clear_history_button.clicked.connect(self.clear_history)
+        layout.addWidget(self.clear_history_button)
 
         self.downloader = Downloader()
         self.downloader.signals.progress.connect(self.update_progress)
@@ -107,29 +177,17 @@ class MainWindow(QMainWindow):
         self.audio_radio.toggled.connect(self.toggle_format_combo)
 
         self.load_history()
-        self.resize_history_table(None)
 
-    def resize_history_table(self, event):
-        total_width = self.history_table.width()
-        column_0_width = 300  # Filename
-        column_1_width = 100  # Type
-        column_2_width = 300  # Path
-        column_3_width = total_width - (column_0_width + column_1_width + column_2_width)  # Open File button
-    
-        self.history_table.setColumnWidth(0, column_0_width)
-        self.history_table.setColumnWidth(1, column_1_width)
-        self.history_table.setColumnWidth(2, column_2_width)
-        self.history_table.setColumnWidth(3, max(column_3_width, 50)) 
     @Slot()
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Download Folder")
         if folder:
-            self.folder_path.setText(folder)
+            self.folder_path.setText(normalize_path(folder))
 
     @Slot()
     def toggle_format_combo(self):
         is_audio = self.audio_radio.isChecked()
-        self.format_combo.setEnabled(is_audio)  # Enable format combo for audio
+        self.format_combo.setEnabled(is_audio)
         self.resolution_combo.setEnabled(not is_audio) 
 
     @Slot()
@@ -139,7 +197,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a valid URL")
             return
 
-        download_dir = self.folder_path.text()
+        download_dir = normalize_path(self.folder_path.text())
         if not os.path.isdir(download_dir):
             QMessageBox.warning(self, "Error", "Invalid download directory")
             return
@@ -181,60 +239,35 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Download completed!")
         self.download_button.setEnabled(True)
         QMessageBox.information(self, "Success", "Download completed successfully!")
-        self.add_to_history(filename, file_path, file_type)
+        self.add_to_history(filename, normalize_path(file_path), file_type)
 
     def add_to_history(self, filename, file_path, file_type):
-        row = self.history_model.rowCount()
-        self.history_model.insertRow(row)
-
-        filename_item = QStandardItem(filename)
-        file_type_item = QStandardItem(file_type)
-        file_path_item = QStandardItem(file_path)
-
-        filename_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        file_type_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        file_path_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-        self.history_model.setItem(row, 0, filename_item)
-        self.history_model.setItem(row, 1, file_type_item)
-        self.history_model.setItem(row, 2, file_path_item)
-
-        dark_color_even = QColor(40, 40, 40)
-        dark_color_odd = QColor(30, 30, 30)
-
-        if row % 2 == 0:
-            filename_item.setBackground(QBrush(dark_color_even))
-            file_type_item.setBackground(QBrush(dark_color_even))
-            file_path_item.setBackground(QBrush(dark_color_even))
-        else:
-            filename_item.setBackground(QBrush(dark_color_odd))
-            file_type_item.setBackground(QBrush(dark_color_odd))
-            file_path_item.setBackground(QBrush(dark_color_odd))
-
-        open_button = QPushButton("...")
-        open_button.setFixedHeight(20)
-        open_button.clicked.connect(lambda: self.open_file_location(file_path))
-        self.history_table.setIndexWidget(self.history_model.index(row, 3), open_button)
-        self.history_table.setRowHeight(row, 30)
-        self.history_table.resizeRowsToContents()
-        self.history_table.setShowGrid(False)
+        item = QStandardItem()
+        file_extension = os.path.splitext(filename)[1].lower()
+        is_audio = file_extension in ['.wav', '.mp3', '.flac', '.m4a'] or file_type == 'audio'
+        item.setData({
+            'filename': os.path.basename(filename),
+            'path': os.path.dirname(normalize_path(file_path)),
+            'file_type': 'audio' if is_audio else 'video'
+        }, Qt.UserRole)
+        self.history_model.insertRow(0, item)
         self.save_history()
 
-    def open_file_location(self, file_path):
-        if sys.platform == "win32":
-            os.startfile(os.path.dirname(file_path))
-        else:
-            opener = "open" if sys.platform == "darwin" else "xdg-open"
-            subprocess.call([opener, os.path.dirname(file_path)])
+    def open_file_location(self, index):
+        data = index.data(Qt.UserRole)
+        if data:
+            file_path = normalize_path(os.path.join(data['path'], data['filename']))
+            if sys.platform == "win32":
+                os.startfile(os.path.dirname(file_path))
+            else:
+                opener = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.call([opener, os.path.dirname(file_path)])
 
     def save_history(self):
         history = []
         for row in range(self.history_model.rowCount()):
-            history.append({
-                "filename": self.history_model.item(row, 0).text(),
-                "file_type": self.history_model.item(row, 1).text(),
-                "file_path": self.history_model.item(row, 2).text()
-            })
+            item_data = self.history_model.item(row).data(Qt.UserRole)
+            history.append(item_data)
         
         with open("download_history.json", "w") as f:
             json.dump(history, f)
@@ -245,6 +278,96 @@ class MainWindow(QMainWindow):
                 history = json.load(f)
             
             for item in history:
-                self.add_to_history(item["filename"], item["file_path"], item["file_type"])
+                list_item = QStandardItem()
+                list_item.setData(item, Qt.UserRole)
+                self.history_model.appendRow(list_item)
         except FileNotFoundError:
             pass
+
+    @Slot()
+    def clear_history(self):
+        reply = QMessageBox.question(self, 'Clear History',
+                                     'Are you sure you want to clear the download history?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            self.history_model.clear()
+            if os.path.exists("download_history.json"):
+                os.remove("download_history.json")
+            self.status_label.setText("History cleared")
+
+    
+    @Slot(QPoint)
+    def show_context_menu(self, position):
+        index = self.history_list.indexAt(position)
+        if not index.isValid():
+            return
+
+        menu = QMenu(self)
+        open_action = QAction("Open File", self)
+        open_action.triggered.connect(lambda: self.open_file(index))
+        menu.addAction(open_action)
+
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(lambda: self.delete_item(index))
+        menu.addAction(delete_action)
+
+        menu.exec_(self.history_list.viewport().mapToGlobal(position))
+
+    def open_file(self, index):
+        data = index.data(Qt.UserRole)
+        if data:
+            file_path = normalize_path(os.path.join(data['path'], data['filename']))
+            if sys.platform == "win32":
+                os.startfile(file_path)
+            elif sys.platform == "darwin":
+                subprocess.call(["open", file_path])
+            else:
+                subprocess.call(["xdg-open", file_path])
+
+    def delete_item(self, index):
+        reply = QMessageBox.question(self, 'Delete Item',
+                                     'Are you sure you want to delete this item from the history?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.history_model.removeRow(index.row())
+            self.save_history()
+            self.status_label.setText("Item deleted from history")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    
+    app.setStyle("Fusion")
+    
+    dark_palette = QPalette()
+    dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.WindowText, Qt.white)
+    dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+    dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+    dark_palette.setColor(QPalette.Text, Qt.white)
+    dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ButtonText, Qt.white)
+    dark_palette.setColor(QPalette.BrightText, Qt.red)
+    dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+    app.setPalette(dark_palette)
+    
+    app.setStyleSheet("""
+        QToolTip { 
+            color: #ffffff; 
+            background-color: #2a82da; 
+            border: 1px solid white; 
+        }
+        QWidget {
+            font-size: 11px;
+        }
+        QListView::item:selected {
+            background-color: #2a82da;
+        }
+    """)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec())

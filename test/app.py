@@ -44,6 +44,7 @@ class NoteListApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication([])
+    app.setStyle("fusion")
     window = NoteListApp()
     window.show()
     app.exec()
