@@ -1,7 +1,10 @@
-installer
+
 build
 download_history.json
 buildnumber.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+#linux and macos venv
+venv

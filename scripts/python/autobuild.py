@@ -39,13 +39,13 @@ def main():
 
     # Run setup.py build
     print("Running setup.py build...")
-    run_command("python app.py build")
+    run_command("python ..\\..\\app.py build")
 
     # Create a zip file with timestamp
     print("Creating zip file...")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     source_dir = ".\\build\\exe.win-amd64-3.12"
-    zip_filename = f".\\build\\mdu-portable_{timestamp}.zip"
+    zip_filename = f".\\build\\portable\\mdu-portable_{timestamp}.zip"
     create_zip(source_dir, zip_filename)
     print(f"Created zip file: {zip_filename}")
 

@@ -6,10 +6,12 @@ from PySide6.QtCore import QObject, Signal
 from env import bin
 
 workdir = bin + '\\bin'
+
 class DownloaderSignals(QObject):
     progress = Signal(float, str, str, str)
     error = Signal(str)
     finished = Signal(str, str, str)  # filename, file_path, file_type
+
 class Downloader(QObject):
     def __init__(self):
         super().__init__()
@@ -18,7 +20,14 @@ class Downloader(QObject):
     def download(self, url, is_audio, audio_format, resolution, fps, download_dir):
         try:
             # Construct the command with the working directory set to the bin directory
-            cmd = [os.path.join(workdir, 'yt-dlp.exe'), url, '--newline', '-P', download_dir]
+            cmd = [os.path.join(workdir, 'yt-dlp.exe'), url, '--newline']
+            
+            # Use the download_dir parameter for the output directory
+            cmd.extend(['-P', download_dir])
+            
+            # Add output template to remove video ID from filename
+            cmd.extend(['--output', '%(title)s.%(ext)s'])
+            
             if is_audio:
                 cmd.extend(['-x', '--audio-format', audio_format])
             else:
@@ -44,8 +53,8 @@ class Downloader(QObject):
                     self.parse_progress(line)
                 elif 'ERROR:' in line:
                     self.signals.error.emit(line.strip())
-                elif '[ExtractAudio] Destination:' in line:
-                    filename = line.split('Destination:')[1].strip()
+                elif '[ExtractAudio] Destination:' in line or '[Merger] Merging formats into' in line:
+                    filename = os.path.basename(line.split('"')[-2]) if '"' in line else line.split(':')[-1].strip()
 
             process.wait()
             if process.returncode != 0:
@@ -58,7 +67,7 @@ class Downloader(QObject):
                 self.signals.finished.emit(filename, file_path, file_type)
         except Exception as e:
             self.signals.error.emit(str(e))
-            print(workdir)
+            # print(workdir)
 
     def parse_progress(self, line):
         progress = 0

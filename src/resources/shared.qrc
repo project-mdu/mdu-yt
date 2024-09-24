@@ -4,5 +4,6 @@
         <file>audio.ico</file>
         <file>file.ico</file>
         <file>vid.ico</file>
+        <file>folder.svg</file>
     </qresource>
 </RCC>

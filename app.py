@@ -29,7 +29,7 @@ build_exe_options = {
 # Define the setup
 setup(
     name="Youtube Downloader",
-    version="2024.09.24b3",
+    version="2024.09.24b4",
     description="Minimalist Youtube Downloader with Qt",
     options={"build_exe": build_exe_options},
     executables=[Executable("mdu.py", base="Win32GUI", icon="./icon/win/icon.ico")],
