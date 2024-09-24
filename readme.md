@@ -1,6 +1,7 @@
-<img width="1024" alt="Frame444444" src="https://github.com/user-attachments/assets/7faca30d-9c47-43c4-a2fe-86c755a8b787">
+<img width="1024" alt="Preview" src="https://github.com/user-attachments/assets/5c12ea5a-7012-4707-8898-e91a08c8ff6c">
 
 # YouTube Downloader
+
 
 A minimalist YouTube Downloader built with Qt, allowing users to easily download videos from YouTube.
 
@@ -44,7 +45,7 @@ This project is licensed under the Unlicense License. See the [LICENSE](LICENSE)
 
 ## Contact
 
-For support or inquiries, please contact [Your Name](info.neixproducer@gmail.com).
+For support or inquiries, please contact [E-Mail](info.neixproducer@gmail.com).
 
 ## Acknowledgments
 
@@ -52,5 +53,5 @@ For support or inquiries, please contact [Your Name](info.neixproducer@gmail.com
 - [cx_Freeze](https://cx-freeze.readthedocs.io/en/latest/) for packaging the application
 
 ## Credit
-- [Yt-Dlp](https://github.com/yt-dlp/yt-dlp) A feature-rich command-line audio/video downloader
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) A feature-rich command-line audio/video downloader
 - [FFmpeg](https://www.ffmpeg.org/) A complete, cross-platform solution to record, convert and stream audio and video. Download Converting video and audio has never been so easy.
