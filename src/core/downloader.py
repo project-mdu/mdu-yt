@@ -2,10 +2,10 @@ import os
 import re
 import subprocess
 import sys
+import platform
+import shutil
 from PySide6.QtCore import QObject, Signal
 from env import bin
-
-workdir = bin + '\\bin'
 
 class DownloaderSignals(QObject):
     progress = Signal(float, str, str, str)
@@ -16,11 +16,61 @@ class Downloader(QObject):
     def __init__(self):
         super().__init__()
         self.signals = DownloaderSignals()
+        self.system = platform.system().lower()
+        self.workdir = self.get_workdir()
+        self.yt_dlp_binary = self.get_yt_dlp_binary()
+
+    def get_workdir(self):
+        if self.system == 'windows':
+            return os.path.join(bin, 'win')
+        elif self.system == 'darwin':
+            return os.path.join(bin, 'mac')
+        elif self.system == 'linux':
+            return '/usr/local/bin'  # Default location for user-installed binaries
+        else:
+            raise OSError(f"Unsupported operating system: {self.system}")
+
+    def get_yt_dlp_binary(self):
+        if self.system == 'windows':
+            return os.path.join(self.workdir, 'yt-dlp.exe')
+        elif self.system == 'darwin':
+            return os.path.join(self.workdir, 'yt-dlp')
+        elif self.system == 'linux':
+            return self.get_linux_binary()
+        else:
+            raise OSError(f"Unsupported operating system: {self.system}")
+
+    def get_linux_binary(self):
+        # Check if yt-dlp is already installed
+        if shutil.which('yt-dlp'):
+            return 'yt-dlp'
+        
+        # If not installed, try to install it
+        package_managers = [
+            ('apt-get', 'apt install -y yt-dlp'),
+            ('pacman', 'pacman -S --noconfirm yt-dlp'),
+            ('dnf', 'dnf install -y yt-dlp'),
+            ('yum', 'yum install -y yt-dlp'),
+            ('zypper', 'zypper install -y yt-dlp')
+        ]
+
+        for pm, install_cmd in package_managers:
+            if shutil.which(pm):
+                try:
+                    subprocess.run(['sudo', pm, 'update'], check=True)
+                    subprocess.run(['sudo'] + install_cmd.split(), check=True)
+                    return 'yt-dlp'
+                except subprocess.CalledProcessError:
+                    print(f"Failed to install yt-dlp using {pm}")
+
+        # If installation failed, use the bundled binary
+        print("Using bundled yt-dlp binary")
+        return os.path.join(bin, 'linux', 'yt-dlp')
 
     def download(self, url, is_audio, audio_format, resolution, fps, download_dir):
         try:
-            # Construct the command with the working directory set to the bin directory
-            cmd = [os.path.join(workdir, 'yt-dlp.exe'), url, '--newline']
+            # Construct the command
+            cmd = [self.yt_dlp_binary, url, '--newline']
             
             # Use the download_dir parameter for the output directory
             cmd.extend(['-P', download_dir])
@@ -37,14 +87,13 @@ class Downloader(QObject):
                 if fps:
                     cmd.append(f'--fps={fps}')
 
-            # Run the subprocess with the bin directory as the working directory
+            # Run the subprocess
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                cwd=workdir,  # Set working directory
-                creationflags=subprocess.CREATE_NO_WINDOW
+                creationflags=subprocess.CREATE_NO_WINDOW if self.system == 'windows' else 0
             )
             
             filename = None
@@ -67,7 +116,6 @@ class Downloader(QObject):
                 self.signals.finished.emit(filename, file_path, file_type)
         except Exception as e:
             self.signals.error.emit(str(e))
-            # print(workdir)
 
     def parse_progress(self, line):
         progress = 0

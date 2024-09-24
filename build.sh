@@ -1,0 +1,1 @@
+python3 ./scripts/python/autobuild.py linux
