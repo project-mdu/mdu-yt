@@ -8,17 +8,20 @@ from PySide6.QtCore import QObject, Signal
 from env import bin
 
 class DownloaderSignals(QObject):
-    progress = Signal(float, str, str, str)
+    progress = Signal(float, str, str, str, int, int)
+    file_downloaded = Signal(str, str, str)
+    finished = Signal()
     error = Signal(str)
-    finished = Signal(str, str, str)  # filename, file_path, file_type
 
 class Downloader(QObject):
     def __init__(self):
         super().__init__()
-        self.signals = DownloaderSignals()
         self.system = platform.system().lower()
         self.workdir = self.get_workdir()
         self.yt_dlp_binary = self.get_yt_dlp_binary()
+        self.signals = DownloaderSignals()
+        self.process = None
+        self.stop_flag = False
 
     def get_workdir(self):
         if self.system == 'windows':
@@ -44,7 +47,7 @@ class Downloader(QObject):
         # Check if yt-dlp is already installed
         if shutil.which('yt-dlp'):
             return 'yt-dlp'
-        
+
         # If not installed, try to install it
         package_managers = [
             ('apt-get', 'apt install -y yt-dlp'),
@@ -67,17 +70,24 @@ class Downloader(QObject):
         print("Using bundled yt-dlp binary")
         return os.path.join(bin, 'linux', 'yt-dlp')
 
-    def download(self, url, is_audio, audio_format, resolution, fps, download_dir):
+    def download(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail):
         try:
+            self.stop_flag = False
             # Construct the command
             cmd = [self.yt_dlp_binary, url, '--newline']
-            
+
             # Use the download_dir parameter for the output directory
             cmd.extend(['-P', download_dir])
-            
+
             # Add output template to remove video ID from filename
-            cmd.extend(['--output', '%(title)s.%(ext)s'])
-            
+            if is_playlist:
+                cmd.extend(['--output', '%(playlist_title)s/%(title)s.%(ext)s'])
+            else:
+                cmd.extend(['--output', '%(title)s.%(ext)s'])
+
+            if with_thumbnail:
+                cmd.extend(["--embed-thumbnail", "--embed-metadata"])
+
             if is_audio:
                 cmd.extend(['-x', '--audio-format', audio_format])
             else:
@@ -87,35 +97,55 @@ class Downloader(QObject):
                 if fps:
                     cmd.append(f'--fps={fps}')
 
+            if is_playlist:
+                cmd.append('--yes-playlist')
+            else:
+                cmd.append('--no-playlist')
+
             # Run the subprocess
-            process = subprocess.Popen(
+            self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW if self.system == 'windows' else 0
             )
-            
-            filename = None
-            for line in process.stdout:
-                if '[download]' in line:
-                    self.parse_progress(line)
-                elif 'ERROR:' in line:
-                    self.signals.error.emit(line.strip())
+
+            current_item = 0
+            total_items = 1
+            for line in self.process.stdout:
+                if self.stop_flag:
+                    self.process.terminate()
+                    self.signals.error.emit("Download stopped by user")
+                    return
+
+                if '[download] Downloading item' in line:
+                    match = re.search(r'item (\d+) of (\d+)', line)
+                    if match:
+                        current_item = int(match.group(1))
+                        total_items = int(match.group(2))
+                elif '[download]' in line:
+                    progress, file_size, download_speed, eta = self.parse_progress(line)
+                    self.signals.progress.emit(progress, file_size, download_speed, eta, current_item, total_items)
                 elif '[ExtractAudio] Destination:' in line or '[Merger] Merging formats into' in line:
                     filename = os.path.basename(line.split('"')[-2]) if '"' in line else line.split(':')[-1].strip()
+                    file_path = os.path.join(download_dir, filename)
+                    file_type = "Audio" if is_audio else "Video"
+                    self.signals.file_downloaded.emit(filename, file_path, file_type)
 
-            process.wait()
-            if process.returncode != 0:
-                self.signals.error.emit(f"yt-dlp exited with code {process.returncode}")
-            else:
-                if not filename:
-                    filename = self.get_last_modified_file(download_dir)
-                file_path = os.path.join(download_dir, filename)
-                file_type = "Audio" if is_audio else "Video"
-                self.signals.finished.emit(filename, file_path, file_type)
+            self.process.wait()
+            if self.process.returncode != 0 and not self.stop_flag:
+                self.signals.error.emit(f"yt-dlp exited with code {self.process.returncode}")
+            elif not self.stop_flag:
+                self.signals.finished.emit()
+
         except Exception as e:
             self.signals.error.emit(str(e))
+
+    def stop(self):
+        self.stop_flag = True
+        if self.process:
+            self.process.terminate()
 
     def parse_progress(self, line):
         progress = 0
@@ -139,10 +169,4 @@ class Downloader(QObject):
         if eta_match:
             eta = eta_match.group(1)
 
-        self.signals.progress.emit(progress, file_size, download_speed, eta)
-
-    def get_last_modified_file(self, directory):
-        files = [os.path.join(directory, f) for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-        if not files:
-            return None
-        return max(files, key=os.path.getmtime)
+        return progress, file_size, download_speed, eta

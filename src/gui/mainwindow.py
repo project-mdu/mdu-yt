@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
                                QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox)
-from PySide6.QtCore import Qt, Slot, QSize, QPoint
+from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
 from src.core.downloader import Downloader
 from src.gui.menubar import MenuBar
@@ -72,9 +72,9 @@ class HistoryItemWidget(QWidget):
         self.path_label.setObjectName("pathLabel")
 
     def get_icon_path(self, file_type):
-        if file_type == 'audio':
+        if file_type == 'Audio':
             return ":/audio.ico"
-        elif file_type == 'video':
+        elif file_type == 'Video':
             return ":/vid.ico"
         else:
             return ":/file.ico"
@@ -98,6 +98,17 @@ class HistoryDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.alt_color1 = QColor(53, 53, 53)  # Darker gray
         self.alt_color2 = QColor(45, 45, 45)  # Slightly lighter gray
+        self.update_colors()
+
+    def update_colors(self):
+        palette = QApplication.palette()
+        base_color = palette.color(QPalette.ColorRole.Base)
+        if base_color.lightness() < 128:  # Dark theme
+            self.alt_color1 = base_color.darker(110)
+            self.alt_color2 = base_color.darker(120)
+        else:  # Light theme
+            self.alt_color1 = base_color.darker(105)
+            self.alt_color2 = base_color.darker(110)
 
     def paint(self, painter, option, index):
         if index.row() % 2 == 0:
@@ -145,12 +156,16 @@ class DeleteConfirmationDialog(QDialog):
         self.yes_button.clicked.connect(self.accept)
         self.no_button.clicked.connect(self.reject)
 
+# class DownloadSignals(QObject):
+#     file_downloaded = Signal(str, str, str)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("YouTube Downloader")
-        self.setGeometry(100, 100, 800, 600)
+        self.setFixedSize(800, 600)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         self.setWindowIcon(QIcon(":/app.ico"))
         self.setMenuBar(MenuBar(self))
 
@@ -167,7 +182,7 @@ class MainWindow(QMainWindow):
 
         url_layout = QHBoxLayout()
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Enter YouTube URL")
+        self.url_input.setPlaceholderText("Enter YouTube URL or playlist URL")
         url_layout.addWidget(self.url_input)
         self.download_button = QPushButton("Download")
         self.download_button.clicked.connect(self.start_download)
@@ -205,8 +220,26 @@ class MainWindow(QMainWindow):
         self.button_group.addButton(self.audio_radio)
         self.video_radio.setChecked(True)
 
+        # Thumbnail checkbox
+        self.thumbnail_checkbox = QCheckBox("Download with thumbnail")
+        option_layout.addWidget(self.thumbnail_checkbox)
+
+
+        # Add a checkbox for playlist download
+        self.playlist_checkbox = QCheckBox("Download as playlist")
+        option_layout.addWidget(self.playlist_checkbox)
+
         option_layout.addStretch()
         layout.addLayout(option_layout)
+
+        # self.download_signals = DownloadSignals()
+        # self.download_signals.file_downloaded.connect(self.add_to_history)
+
+        # Add stop button
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.clicked.connect(self.stop_download)
+        self.stop_button.setEnabled(False)
+        url_layout.addWidget(self.stop_button)
 
         folder_layout = QHBoxLayout()
         self.folder_label = QLabel("Download folder:")
@@ -240,7 +273,7 @@ class MainWindow(QMainWindow):
         self.history_list.customContextMenuRequested.connect(self.show_context_menu)
         self.history_list.setStyleSheet("""
             QListView {
-                background-color: #2b2b2b;
+                background-color: palette(base);
                 border: none;
             }
             QListView::item {
@@ -248,8 +281,8 @@ class MainWindow(QMainWindow):
                 padding: 2px;
             }
             QListView::item:selected {
-                background-color: #2a82da;
-                color: white;
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
             }
         """)
         layout.addWidget(self.history_list)
@@ -260,8 +293,13 @@ class MainWindow(QMainWindow):
 
         self.downloader = Downloader()
         self.downloader.signals.progress.connect(self.update_progress)
-        self.downloader.signals.error.connect(self.show_error)
+        self.downloader.signals.file_downloaded.connect(self.add_to_history)
         self.downloader.signals.finished.connect(self.download_finished)
+        self.downloader.signals.error.connect(self.show_error)
+
+        # Add a label for playlist progress
+        self.playlist_progress_label = QLabel()
+        layout.addWidget(self.playlist_progress_label)
 
         # Connect signals
         self.video_radio.toggled.connect(self.toggle_options)
@@ -354,11 +392,20 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Update Error", f"An error occurred during the update: {error}")
         self.statusBar.showMessage("Update failed")
 
+
+
     @Slot()
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Download Folder")
         if folder:
             self.folder_path.setText(normalize_path(folder))
+
+    
+    @Slot()
+    def stop_download(self):
+        self.downloader.stop()
+        self.status_label.setText("Stopping download...")
+        self.stop_button.setEnabled(False)
 
     @Slot()
     def start_download(self):
@@ -367,28 +414,34 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a valid URL")
             return
 
-        download_dir = normalize_path(self.folder_path.text())
+        download_dir = self.normalize_path(self.folder_path.text())
         if not os.path.isdir(download_dir):
             QMessageBox.warning(self, "Error", "Invalid download directory")
             return
 
         self.download_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
         self.status_label.setText("Starting download...")
         self.progress_bar.setValue(0)
+        self.playlist_progress_label.setText("")
 
         is_audio = self.audio_radio.isChecked()
         audio_format = self.format_combo.currentText() if is_audio else None
         resolution = self.resolution_combo.currentText() if not is_audio else None
         fps = self.fps_combo.currentText() if (not is_audio and self.fps_checkbox.isChecked()) else None
+        is_playlist = self.playlist_checkbox.isChecked()
+        with_thumbnail = self.thumbnail_checkbox.isChecked()
 
-        thread = threading.Thread(target=self.downloader.download,
-                                  args=(url, is_audio, audio_format, resolution, fps, download_dir),
-                                  daemon=True)
-        thread.start()
+        self.download_thread = threading.Thread(target=self.download_thread_function,
+                                                args=(url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail),
+                                                daemon=True)
+        self.download_thread.start()
 
+    def download_thread_function(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail):
+        self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail)
 
-    @Slot(float, str, str, str)
-    def update_progress(self, progress, file_size, download_speed, eta):
+    @Slot(float, str, str, str, int, int)
+    def update_progress(self, progress, file_size, download_speed, eta, current_item, total_items):
         self.progress_bar.setValue(int(progress))
         status = f"Downloading: {progress:.1f}%"
         if file_size:
@@ -398,19 +451,28 @@ class MainWindow(QMainWindow):
         if eta:
             status += f" | ETA: {eta}"
         self.status_label.setText(status)
+        
+        if total_items > 1:
+            self.playlist_progress_label.setText(f"Downloading item {current_item} of {total_items}")
+        else:
+            self.playlist_progress_label.setText("")
+
 
     @Slot(str)
-    def show_error(self, error):
-        self.status_label.setText(f"Error: {error}")
+    def show_error(self, error_message):
+        self.status_label.setText(f"Error: {error_message}")
         self.download_button.setEnabled(True)
-        QMessageBox.critical(self, "Error", error)
+        self.stop_button.setEnabled(False)
+        self.playlist_progress_label.setText("")
+        QMessageBox.critical(self, "Error", error_message)
 
-    @Slot(str, str, str)
-    def download_finished(self, filename, file_path, file_type):
+    @Slot()
+    def download_finished(self):
         self.status_label.setText("Download completed!")
         self.download_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        self.playlist_progress_label.setText("")
         QMessageBox.information(self, "Success", "Download completed successfully!")
-        self.add_to_history(filename, file_path, file_type)
 
     def toggle_options(self):
         is_video = self.video_radio.isChecked()
@@ -418,14 +480,13 @@ class MainWindow(QMainWindow):
         self.fps_combo.setEnabled(is_video)
         self.format_combo.setEnabled(not is_video)
 
+    @Slot(str, str, str)
     def add_to_history(self, filename, file_path, file_type):
         item = QStandardItem()
-        file_extension = os.path.splitext(filename)[1].lower()
-        is_audio = file_extension in ['.wav', '.mp3', '.flac', '.m4a'] or file_type == 'audio'
         item_data = {
             'filename': os.path.basename(filename),
             'path': os.path.dirname(self.normalize_path(file_path)),
-            'file_type': 'audio' if is_audio else 'video'
+            'file_type': file_type
         }
         item.setData(item_data, Qt.UserRole)
         self.history_model.insertRow(0, item)
@@ -521,35 +582,91 @@ if __name__ == "__main__":
 
     app.setStyle("Fusion")
 
+    # Define dark and light palettes
     dark_palette = QPalette()
-    dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.WindowText, Qt.white)
-    dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
-    dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
-    dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-    dark_palette.setColor(QPalette.Text, Qt.white)
-    dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.ButtonText, Qt.white)
-    dark_palette.setColor(QPalette.BrightText, Qt.red)
-    dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.HighlightedText, Qt.black)
-    app.setPalette(dark_palette)
+    dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
+    dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
 
-    app.setStyleSheet("""
-        QToolTip {
-            color: #ffffff;
-            background-color: #2a82da;
-            border: 1px solid white;
-        }
-        QWidget {
-            font-size: 11px;
-        }
-        QListView::item:selected {
-            background-color: #2a82da;
-        }
-    """)
+    light_palette = QPalette()
+    light_palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
+    light_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
+    light_palette.setColor(QPalette.ColorRole.Base, Qt.GlobalColor.white)
+    light_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(240, 240, 240))
+    light_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+    light_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.black)
+    light_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
+    light_palette.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
+    light_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
+    light_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    light_palette.setColor(QPalette.ColorRole.Link, QColor(0, 0, 255))
+    light_palette.setColor(QPalette.ColorRole.Highlight, QColor(0, 120, 215))
+    light_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+
+    # Function to set the theme
+    def set_theme(is_dark):
+        if is_dark:
+            app.setPalette(dark_palette)
+            app.setStyleSheet("""
+                QToolTip {
+                    color: #ffffff;
+                    background-color: #2a82da;
+                    border: 1px solid white;
+                }
+                QWidget {
+                    font-size: 11px;
+                }
+                QListView::item:selected {
+                    background-color: #2a82da;
+                }
+            """)
+        else:
+            app.setPalette(app.style().standardPalette())
+            app.setStyleSheet("""
+                QToolTip {
+                    color: #000000;
+                    background-color: #f0f0f0;
+                    border: 1px solid black;
+                }
+                QWidget {
+                    font-size: 11px;
+                }
+                QListView::item:selected {
+                    background-color: #0078d7;
+                }
+            """)
+
+    # Auto-detect system theme
+    if hasattr(QStyleFactory, 'qt_mac_set_native_theme'):
+        # macOS
+        from Foundation import NSUserDefaults
+        is_dark = NSUserDefaults.standardUserDefaults().stringForKey_("AppleInterfaceStyle") == "Dark"
+    elif sys.platform == "win32":
+        # Windows
+        import winreg
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            is_dark = value == 0
+        except FileNotFoundError:
+            is_dark = False
+    else:
+        # Linux and others (default to light theme)
+        is_dark = False
+
+    # Set the detected theme
+    set_theme(is_dark)
+
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec())

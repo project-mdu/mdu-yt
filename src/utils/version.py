@@ -1,1 +1,1 @@
-appversion = "2024.09.25b5"
+appversion = "2024.10.01"
