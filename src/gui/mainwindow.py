@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
                                QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox)
-from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal
+from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
 from src.core.downloader import Downloader
 from src.gui.menubar import MenuBar
@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About YouTube Downloader",
-                        f"YouTube Downloader\n\nVersion {appversion}\n\nDeveloped by Nawapon Boonjua")
+                        f"YouTube Downloader\nVersion {appversion}\nDeveloped by Nawapon Boonjua\n\nQt Version: {__version__}\nPython Version: {sys.version}\nyt-dlp version: 2024.08.06")
 
     def check_for_updates(self):
         self.statusBar.showMessage("Checking for updates...")

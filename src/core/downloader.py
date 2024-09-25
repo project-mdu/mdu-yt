@@ -74,7 +74,7 @@ class Downloader(QObject):
         try:
             self.stop_flag = False
             # Construct the command
-            cmd = [self.yt_dlp_binary, url, '--newline']
+            cmd = [self.yt_dlp_binary, url,'--no-mtime', '--newline']
 
             # Use the download_dir parameter for the output directory
             cmd.extend(['-P', download_dir])
