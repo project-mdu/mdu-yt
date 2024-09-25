@@ -3,6 +3,7 @@ import sys
 import json
 import threading
 import subprocess
+import platform
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
@@ -232,9 +233,6 @@ class MainWindow(QMainWindow):
         option_layout.addStretch()
         layout.addLayout(option_layout)
 
-        # self.download_signals = DownloadSignals()
-        # self.download_signals.file_downloaded.connect(self.add_to_history)
-
         # Add stop button
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self.stop_download)
@@ -351,7 +349,7 @@ class MainWindow(QMainWindow):
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About YouTube Downloader",
-                        f"YouTube Downloader\nVersion {appversion}\nDeveloped by Nawapon Boonjua\n\nQt Version: {__version__}\nPython Version: {sys.version}\nyt-dlp version: 2024.08.06")
+                        f"YouTube Downloader\nVersion {appversion}\nDeveloped by Nawapon Boonjua\n\nQt Version: {__version__}\nPython Version: {sys.version}\nyt-dlp version: 2024.08.06\n\nOS: {platform.platform()}")
 
     def check_for_updates(self):
         self.statusBar.showMessage("Checking for updates...")
@@ -473,6 +471,7 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(False)
         self.playlist_progress_label.setText("")
         QMessageBox.information(self, "Success", "Download completed successfully!")
+        self.progress_bar.setValue(0)
 
     def toggle_options(self):
         is_video = self.video_radio.isChecked()
