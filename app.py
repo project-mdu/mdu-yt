@@ -3,7 +3,7 @@ import sys
 import os
 from PySide6 import QtCore
 import platform
-
+from src.utils.version import appversion
 # Determine the current platform
 current_platform = platform.system().lower()
 
@@ -15,7 +15,7 @@ bin_folder = os.path.join(os.getcwd(), 'bin')
 
 # Collect platform-specific files from the bin folder
 if current_platform == "windows":
-    bin_include = [(os.path.join(bin_folder, 'win'), 'bin')]
+    bin_include = [(os.path.join(bin_folder, 'win'), 'bin/win')]
     base = "Win32GUI"
     icon = os.path.join("icon", "win", "icon.ico")
 elif current_platform == "darwin":
@@ -41,10 +41,10 @@ build_exe_options = {
 # Define the setup
 setup(
     name="Youtube Downloader",
-    version="2024.09.24b4",
+    version=appversion,
     description="Minimalist Youtube Downloader with Qt",
     options={"build_exe": build_exe_options},
-    executables=[Executable("mdu.py", base=base, icon=icon, target_name="Youtube Downloader")],
+    executables=[Executable("mdu.py", base=base, icon=icon, target_name="mdu")],
 )
 
 # Additional platform-specific setup for macOS

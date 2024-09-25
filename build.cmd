@@ -1,2 +1,2 @@
 @echo off
-python .\script\python\autobuild.py windows
+python .\scripts\python\autobuild.py windows

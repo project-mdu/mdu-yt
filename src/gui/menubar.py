@@ -12,7 +12,7 @@ class MenuBar(QMenuBar):
 
     def create_file_menu(self):
         file_menu = self.addMenu("&File")
-        
+
         new_download = QAction(QIcon(":/icons/new.png"), "&Add Multiple Download", self)
         new_download.setShortcut("Ctrl+N")
         new_download.triggered.connect(self.parent.open_multiple_download_dialog)
@@ -32,7 +32,7 @@ class MenuBar(QMenuBar):
 
     def create_edit_menu(self):
         edit_menu = self.addMenu("&Edit")
-        
+
         preferences = QAction(QIcon(":/icons/preferences.png"), "&Preferences", self)
         preferences.setShortcut("Ctrl+P")
         preferences.triggered.connect(self.parent.show_preferences)
@@ -40,7 +40,7 @@ class MenuBar(QMenuBar):
 
     def create_help_menu(self):
         help_menu = self.addMenu("&Help")
-        
+
         about_action = QAction(QIcon(":/icons/about.png"), "&About", self)
         about_action.triggered.connect(self.parent.show_about_dialog)
         help_menu.addAction(about_action)
@@ -48,6 +48,7 @@ class MenuBar(QMenuBar):
         check_updates = QAction(QIcon(":/icons/update.png"), "Check for &Updates", self)
         check_updates.triggered.connect(self.parent.check_for_updates)
         help_menu.addAction(check_updates)
+
 
 # def new_download(self):
 #     # Implement new download functionality

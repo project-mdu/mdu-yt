@@ -38,8 +38,8 @@ def get_platform_specific_paths():
     system = platform.system().lower()
     if system == "windows":
         build_dir = os.path.join(os.getcwd(), "build", "exe.win-amd64-3.12")
-        inno_setup_path = r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-        return build_dir, inno_setup_path
+        nsis_path = r"C:\Program Files (x86)\NSIS\makensis.exe"
+        return build_dir, nsis_path
     elif system == "darwin":
         build_dir = os.path.join(os.getcwd(), "build", "Youtube Downloader.app")
         return build_dir, None
@@ -77,7 +77,7 @@ def main():
         run_command("python app.py build")
 
     # Get platform-specific paths
-    build_dir, inno_setup_path = get_platform_specific_paths()
+    build_dir, nsis_path = get_platform_specific_paths()
 
     # Create a zip file with timestamp
     print("Creating zip file...")
@@ -87,13 +87,13 @@ def main():
     print(f"Created zip file: {zip_filename}")
 
     # Run platform-specific installer creation
-    if target_platform == "windows" and inno_setup_path:
-        if not os.path.exists(inno_setup_path):
-            print(f"Inno Setup not found at {inno_setup_path}")
+    if target_platform == "windows" and nsis_path:
+        if not os.path.exists(nsis_path):
+            print(f"Inno Setup not found at {nsis_path}")
             print("Please install Inno Setup or update the path in the script.")
         else:
-            print("Running Inno Setup...")
-            run_command(f'"{inno_setup_path}" scripts/installer/makeinstall.iss')
+            print("Running NSIS Setup...")
+            run_command(f'"{nsis_path}" scripts/installer/makeinstall.nsi')
     elif target_platform == "mac":
         print("macOS .app bundle created.")
         # Add commands here if you want to create a .dmg file

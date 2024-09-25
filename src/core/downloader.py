@@ -22,9 +22,9 @@ class Downloader(QObject):
 
     def get_workdir(self):
         if self.system == 'windows':
-            return os.path.join(bin, 'win')
+            return os.path.join(bin, 'bin', 'win')
         elif self.system == 'darwin':
-            return os.path.join(bin, 'mac')
+            return os.path.join(bin, 'bin', 'mac')
         elif self.system == 'linux':
             return '/usr/local/bin'  # Default location for user-installed binaries
         else:

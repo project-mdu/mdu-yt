@@ -1,0 +1,145 @@
+/* WinUI-inspired Dark Theme QSS */
+
+/* Global Styles */
+QWidget {
+    background-color: #202020;
+    color: #ffffff;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* PushButton */
+QPushButton {
+    background-color: #323232;
+    border: 1px solid #3f3f3f;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QPushButton:hover {
+    background-color: #3a3a3a;
+}
+
+QPushButton:pressed {
+    background-color: #1f1f1f;
+}
+
+/* TextInput (QLineEdit) */
+QLineEdit {
+    background-color: #2b2b2b;
+    border: 1px solid #3f3f3f;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QLineEdit:focus {
+    border-color: #0078d4;
+}
+
+/* MenuBar */
+QMenuBar {
+    background-color: #2d2d2d;
+}
+
+QMenuBar::item {
+    padding: 4px 8px;
+}
+
+QMenuBar::item:selected {
+    background-color: #3a3a3a;
+}
+
+QMenu {
+    background-color: #2d2d2d;
+    border: 1px solid #3f3f3f;
+}
+
+QMenu::item {
+    padding: 4px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #3a3a3a;
+}
+
+/* Radio Button */
+QRadioButton {
+    spacing: 5px;
+}
+
+QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border: 2px solid #727272;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #0078d4;
+    border-color: #0078d4;
+}
+
+/* Checkbox */
+QCheckBox {
+    spacing: 5px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 2px solid #727272;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #0078d4;
+    border-color: #0078d4;
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: #323232;
+    border: 1px solid #3f3f3f;
+    border-radius: 4px;
+    padding: 4px;
+    min-width: 100px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #3f3f3f;
+}
+
+QComboBox::down-arrow {
+    image: url(down_arrow.png);
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2d2d2d;
+    border: 1px solid #3f3f3f;
+}
+
+/* ProgressBar */
+QProgressBar {
+    background-color: #2b2b2b;
+    border: 1px solid #3f3f3f;
+    border-radius: 4px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: #0078d4;
+    width: 10px;
+}
+
+/* StatusBar */
+QStatusBar {
+    background-color: #2d2d2d;
+    color: #ffffff;
+}
+
+QStatusBar::item {
+    border: none;
+}

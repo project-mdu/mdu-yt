@@ -3,9 +3,9 @@ import sys
 import json
 import threading
 import subprocess
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                               QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton, 
-                               QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView, 
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                               QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
+                               QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
                                QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox)
 from PySide6.QtCore import Qt, Slot, QSize, QPoint
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
@@ -13,6 +13,7 @@ from src.core.downloader import Downloader
 from src.gui.menubar import MenuBar
 from src.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.core.updater import GitHubUpdater
+from src.utils.version import appversion
 
 def normalize_path(path):
     return path.replace(os.sep, '/')
@@ -41,7 +42,7 @@ class HistoryItemWidget(QWidget):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
-        
+
         icon = QIcon(self.get_icon_path(data['file_type']))
         self.icon_label = QLabel()
         self.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
@@ -77,7 +78,7 @@ class HistoryItemWidget(QWidget):
             return ":/vid.ico"
         else:
             return ":/file.ico"
-        
+
     def open_file_location(self, data):
         file_path = os.path.join(data['path'], data['filename'])
         if sys.platform == "win32":
@@ -147,19 +148,19 @@ class DeleteConfirmationDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        
+
         self.setWindowTitle("YouTube Downloader")
         self.setGeometry(100, 100, 800, 600)
         self.setWindowIcon(QIcon(":/app.ico"))
         self.setMenuBar(MenuBar(self))
 
-        self.current_version = "2024.09.24b4"  # Replace with your actual current version
+        self.current_version = appversion  # Replace with your actual current version
         self.updater = GitHubUpdater(self.current_version)
         self.updater.signals.update_available.connect(self.on_update_available)
         self.updater.signals.update_progress.connect(self.on_update_progress)
         self.updater.signals.update_completed.connect(self.on_update_completed)
         self.updater.signals.update_error.connect(self.on_update_error)
-        
+
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
@@ -174,26 +175,26 @@ class MainWindow(QMainWindow):
         layout.addLayout(url_layout)
 
         option_layout = QHBoxLayout()
-        
+
         # Video options
         self.video_radio = QRadioButton("Video:")
         option_layout.addWidget(self.video_radio)
-        
+
         self.resolution_combo = QComboBox()
         self.resolution_combo.addItems(["720", "1080", "1440", "2160", "best"])
         option_layout.addWidget(self.resolution_combo)
-        
+
         self.fps_checkbox = QCheckBox("FPS:")
         option_layout.addWidget(self.fps_checkbox)
-        
+
         self.fps_combo = QComboBox()
         self.fps_combo.addItems(["30", "60", "auto"])
         option_layout.addWidget(self.fps_combo)
-        
+
         # Audio options
         self.audio_radio = QRadioButton("Audio:")
         option_layout.addWidget(self.audio_radio)
-        
+
         self.format_combo = QComboBox()
         self.format_combo.addItems(["wav", "mp3", "m4a", "flac"])
         option_layout.addWidget(self.format_combo)
@@ -311,8 +312,8 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Preferences", "Preferences dialog not implemented yet.")
 
     def show_about_dialog(self):
-        QMessageBox.about(self, "About YouTube Downloader", 
-                          "YouTube Downloader\n\nVersion 2024.09.24b4\n\nDeveloped by Nawapon Boonjua")
+        QMessageBox.about(self, "About YouTube Downloader",
+                        f"YouTube Downloader\n\nVersion {appversion}\n\nDeveloped by Nawapon Boonjua")
 
     def check_for_updates(self):
         self.statusBar.showMessage("Checking for updates...")
@@ -326,7 +327,7 @@ class MainWindow(QMainWindow):
             self.statusBar.showMessage("No updates available")
 
     def on_update_available(self, version):
-        reply = QMessageBox.question(self, "Update Available", 
+        reply = QMessageBox.question(self, "Update Available",
                                      f"A new version ({version}) is available. Do you want to update?",
                                      QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -345,7 +346,7 @@ class MainWindow(QMainWindow):
         self.statusBar.showMessage(f"Updating: {progress}%")
 
     def on_update_completed(self):
-        QMessageBox.information(self, "Update Completed", 
+        QMessageBox.information(self, "Update Completed",
                                 "The update has been installed. Please restart the application.")
         self.statusBar.showMessage("Update completed")
 
@@ -380,8 +381,8 @@ class MainWindow(QMainWindow):
         resolution = self.resolution_combo.currentText() if not is_audio else None
         fps = self.fps_combo.currentText() if (not is_audio and self.fps_checkbox.isChecked()) else None
 
-        thread = threading.Thread(target=self.downloader.download, 
-                                  args=(url, is_audio, audio_format, resolution, fps, download_dir), 
+        thread = threading.Thread(target=self.downloader.download,
+                                  args=(url, is_audio, audio_format, resolution, fps, download_dir),
                                   daemon=True)
         thread.start()
 
@@ -410,7 +411,7 @@ class MainWindow(QMainWindow):
         self.download_button.setEnabled(True)
         QMessageBox.information(self, "Success", "Download completed successfully!")
         self.add_to_history(filename, file_path, file_type)
-    
+
     def toggle_options(self):
         is_video = self.video_radio.isChecked()
         self.resolution_combo.setEnabled(is_video)
@@ -440,7 +441,7 @@ class MainWindow(QMainWindow):
         for row in range(self.history_model.rowCount()):
             item_data = self.history_model.item(row).data(Qt.UserRole)
             history.append(item_data)
-        
+
         with open("download_history.json", "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
 
@@ -448,7 +449,7 @@ class MainWindow(QMainWindow):
         try:
             with open("download_history.json", "r", encoding="utf-8") as f:
                 history = json.load(f)
-            
+
             for item in history:
                 list_item = QStandardItem()
                 list_item.setData(item, Qt.UserRole)
@@ -470,7 +471,7 @@ class MainWindow(QMainWindow):
                 os.remove("download_history.json")
             self.status_label.setText("History cleared")
 
-    
+
     @Slot(QPoint)
     def show_context_menu(self, position):
         index = self.history_list.indexAt(position)
@@ -517,9 +518,9 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
+
     app.setStyle("Fusion")
-    
+
     dark_palette = QPalette()
     dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
     dark_palette.setColor(QPalette.WindowText, Qt.white)
@@ -535,12 +536,12 @@ if __name__ == "__main__":
     dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
     dark_palette.setColor(QPalette.HighlightedText, Qt.black)
     app.setPalette(dark_palette)
-    
+
     app.setStyleSheet("""
-        QToolTip { 
-            color: #ffffff; 
-            background-color: #2a82da; 
-            border: 1px solid white; 
+        QToolTip {
+            color: #ffffff;
+            background-color: #2a82da;
+            border: 1px solid white;
         }
         QWidget {
             font-size: 11px;
