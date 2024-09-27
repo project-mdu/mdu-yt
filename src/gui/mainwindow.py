@@ -7,7 +7,7 @@ import platform
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
-                               QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox)
+                               QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox, QSpinBox)
 from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
 from src.core.downloader import Downloader
@@ -15,6 +15,7 @@ from src.gui.menubar import MenuBar
 from src.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.core.updater import GitHubUpdater
 from src.utils.version import appversion
+from ui_mainwindow import Ui_MainWindow
 
 def normalize_path(path):
     return path.replace(os.sep, '/')
@@ -165,10 +166,11 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("YouTube Downloader")
-        self.setFixedSize(800, 600)
+        self.setFixedSize(1100, 600)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         self.setWindowIcon(QIcon(":/app.ico"))
         self.setMenuBar(MenuBar(self))
+        option_layout = QHBoxLayout()
 
         self.current_version = appversion  # Replace with your actual current version
         self.updater = GitHubUpdater(self.current_version)
@@ -232,6 +234,8 @@ class MainWindow(QMainWindow):
 
         option_layout.addStretch()
         layout.addLayout(option_layout)
+
+        self.setup_encoding_options(option_layout)
 
         # Add stop button
         self.stop_button = QPushButton("Stop")
@@ -343,6 +347,61 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Error", "Downloads folder does not exist.")
 
+    def setup_encoding_options(self, layout):
+        encoding_layout = QHBoxLayout()
+
+        self.encoding_checkbox = QCheckBox("Custom Encoding")
+        encoding_layout.addWidget(self.encoding_checkbox)
+
+        self.encoding_method_combo = QComboBox()
+        self.encoding_method_combo.addItems(["x264", "qsv (h264)", "qsv (hevc)", "nvenc (h264)", "nvenc (hevc)", "amf (h264)", "amf (hevc)"])
+        self.encoding_method_combo.setEnabled(False)
+        encoding_layout.addWidget(self.encoding_method_combo)
+
+        self.preset_combo = QComboBox()
+        self.preset_combo.addItems(["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"])
+        self.preset_combo.setCurrentText("medium")
+        self.preset_combo.setEnabled(False)
+        encoding_layout.addWidget(self.preset_combo)
+
+        self.quality_spinbox = QSpinBox()
+        self.quality_spinbox.setRange(0, 51)
+        self.quality_spinbox.setValue(23)
+        self.quality_spinbox.setEnabled(False)
+        encoding_layout.addWidget(self.quality_spinbox)
+
+        self.encoding_checkbox.stateChanged.connect(self.toggle_encoding_method)
+
+        layout.addLayout(encoding_layout)
+
+    def get_encoding_command(self, preset="medium", quality=23):
+        if not self.encoding_checkbox.isChecked():
+            return None
+        
+        encoding_method = self.encoding_method_combo.currentText()
+        
+        # Define a dictionary of encoding methods and their corresponding commands
+        encoding_commands = {
+            "x264": f"-c:v libx264 -preset {preset} -crf {quality}",
+            "qsv (h264)": f"-c:v h264_qsv -preset {preset} -global_quality {quality}",
+            "qsv (hevc)": f"-c:v hevc_qsv -preset {preset} -global_quality {quality}",
+            "nvenc (h264)": f"-c:v h264_nvenc -preset p{preset[0]} -cq {quality}",
+            "nvenc (hevc)": f"-c:v hevc_nvenc -preset p{preset[0]} -cq {quality}",
+            "amf (h264)": f"-c:v h264_amf -quality {preset} -qp_i {quality} -qp_p {quality} -qp_b {quality}",
+            "amf (hevc)": f"-c:v hevc_amf -quality {preset} -qp_i {quality} -qp_p {quality} -qp_b {quality}"
+        }
+        
+        return encoding_commands.get(encoding_method, None)
+
+    def toggle_encoding_method(self, state):
+        print(f"Toggle encoding method called. State: {state}")
+        is_checked = state == 2  # Qt.Checked is equal to 2
+        print(f"Is checked: {is_checked}")
+        self.encoding_method_combo.setEnabled(is_checked)
+        self.preset_combo.setEnabled(is_checked)
+        self.quality_spinbox.setEnabled(is_checked)
+        print(f"Combo box enabled: {self.encoding_method_combo.isEnabled()}")
+
     def show_preferences(self):
         # Implement preferences dialog
         QMessageBox.information(self, "Preferences", "Preferences dialog not implemented yet.")
@@ -429,14 +488,21 @@ class MainWindow(QMainWindow):
         fps = self.fps_combo.currentText() if (not is_audio and self.fps_checkbox.isChecked()) else None
         is_playlist = self.playlist_checkbox.isChecked()
         with_thumbnail = self.thumbnail_checkbox.isChecked()
+        
+        # Add encoding options
+        custom_encoding = self.encoding_checkbox.isChecked()
+        encoding_method = self.encoding_method_combo.currentText() if custom_encoding else None
 
         self.download_thread = threading.Thread(target=self.download_thread_function,
-                                                args=(url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail),
+                                                args=(url, is_audio, audio_format, resolution, fps, download_dir, 
+                                                      is_playlist, with_thumbnail, custom_encoding, encoding_method),
                                                 daemon=True)
         self.download_thread.start()
 
-    def download_thread_function(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail):
-        self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail)
+    def download_thread_function(self, url, is_audio, audio_format, resolution, fps, download_dir, 
+                                 is_playlist, with_thumbnail, custom_encoding, encoding_method):
+        self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, 
+                                 is_playlist, with_thumbnail, custom_encoding, encoding_method)
 
     @Slot(float, str, str, str, int, int)
     def update_progress(self, progress, file_size, download_speed, eta, current_item, total_items):
