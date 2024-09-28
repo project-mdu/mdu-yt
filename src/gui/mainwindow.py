@@ -15,7 +15,7 @@ from src.gui.menubar import MenuBar
 from src.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.core.updater import GitHubUpdater
 from src.utils.version import appversion
-from ui_mainwindow import Ui_MainWindow
+# from ui_mainwindow import Ui_MainWindow
 
 def normalize_path(path):
     return path.replace(os.sep, '/')
