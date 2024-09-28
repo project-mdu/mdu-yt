@@ -8,3 +8,4 @@ __pycache__/
 
 #linux and macos venv
 venv
+src/core/ytdlp

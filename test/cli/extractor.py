@@ -1,13 +1,13 @@
 import sys
 import os
 
-# Add the directory containing yt_dlp to the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-yt_dlp_path = os.path.join(current_dir, '..', '..', 'src', 'core')
-sys.path.append(yt_dlp_path)
+# # Add the directory containing yt_dlp to the Python path
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# yt_dlp_path = os.path.join(current_dir, '..', '..', 'src', 'core')
+# sys.path.append(yt_dlp_path)
 
-from yt_dlp import YoutubeDL
-from yt_dlp.extractor.youtube import YoutubeIE
+from src.core.ytdlp.yt_dlp import YoutubeDL
+from src.core.ytdlp.yt_dlp.extractor.youtube import YoutubeIE
 
 def extract_video_audio_url(youtube_url):
     ydl_opts = {
