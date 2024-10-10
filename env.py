@@ -1,2 +1,3 @@
 import os
-bin = os.getcwd()
+from pathlib import Path
+root = Path(__file__)

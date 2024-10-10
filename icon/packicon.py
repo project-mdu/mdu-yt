@@ -17,7 +17,7 @@ def main():
     os.makedirs("./mac", exist_ok=True)
 
     # Path to your source image
-    source_image = "raw/icon.png"  # Replace with your image path
+    source_image = "raw/iconew.png"  # Replace with your image path
 
     # Generate .ico file
     create_ico(source_image, "./win/icon.ico")

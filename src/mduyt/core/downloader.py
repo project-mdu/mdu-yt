@@ -5,10 +5,14 @@ import sys
 import platform
 import shutil
 from PySide6.QtCore import QObject, Signal
-from env import bin
+from pathlib import Path
+from env import root
+import yt_dlp
+import json  # Make sure to import the json module
 
 class DownloaderSignals(QObject):
     progress = Signal(float, str, str, str, int, int)
+    title_fetched = Signal(str)  # New signal for title fetching
     file_downloaded = Signal(str, str, str)
     finished = Signal()
     error = Signal(str)
@@ -27,16 +31,17 @@ class Downloader(QObject):
         self.audio_file = None
         self.download_dir = None
 
+    rootpath = root
     def get_workdir(self):
         if self.system == 'windows':
-            return os.path.join(bin, 'bin', 'win')
+            return os.path.join(self.rootpath,'..', 'bin', 'win')
         elif self.system == 'darwin':
-            return os.path.join(bin, 'bin', 'mac')
+            return os.path.join(self.rootpath,'..', 'bin', 'mac')
         elif self.system == 'linux':
             return '/usr/local/bin'  # Default location for user-installed binaries
         else:
             raise OSError(f"Unsupported operating system: {self.system}")
-
+    
     def get_yt_dlp_binary(self):
         if self.system == 'windows':
             return os.path.join(self.workdir, 'yt-dlp.exe')
@@ -80,15 +85,44 @@ class Downloader(QObject):
 
         print(f"Using bundled {binary_name} binary")
         return os.path.join(bin, 'linux', binary_name)
+    
+    def fetch_title(self, url):
+        """Gets the video title from yt-dlp without downloading."""
+        try:
+            ydl_opts = {'quiet': True, 'no_warnings': True}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extracting video info without downloading
+                info = ydl.extract_info(url, download=False)
 
-    def download(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail, customencoding):
+            # Convert the info dictionary to JSON format
+            info_json = json.dumps(info, indent=4)  # Pretty-print JSON with an indent of 4 spaces
+            print(info_json)  # Print the JSON output
+
+            title = info.get('title', None)  # Get the title from the info
+            if title:
+                self.signals.title_fetched.emit(title)  # Emit signal with the title
+            return title  # Return the title
+        except Exception as e:
+            self.signals.error.emit(f"Failed to fetch title: {str(e)}")  # Emit error signal
+            return None
+
+
+
+    def download(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail, get_title):
         self.download_dir = download_dir
         self.video_file = None
         self.audio_file = None
-        
+
+        # Fetch title if get_title is True
+        if get_title:
+            title = self.fetch_title(url)
+            if title is None:
+                return  # If title fetching failed, exit early
+
         try:
             self.stop_flag = False
             cmd = [self.yt_dlp_binary, url, '--no-mtime', '--newline']
+            print(self.yt_dlp_binary)
 
             cmd.extend(['-P', download_dir])
 
@@ -96,9 +130,6 @@ class Downloader(QObject):
                 cmd.extend(['--output', '%(playlist_title)s/%(title)s.%(ext)s'])
             else:
                 cmd.extend(['--output', '%(title)s.%(ext)s'])
-
-            if customencoding:
-                cmd.append("-k")
 
             if with_thumbnail:
                 cmd.extend(["--embed-thumbnail", "--embed-metadata"])
@@ -153,6 +184,7 @@ class Downloader(QObject):
 
         except Exception as e:
             self.signals.error.emit(str(e))
+            print(self.yt_dlp_binary)
 
     def stop(self):
         self.stop_flag = True

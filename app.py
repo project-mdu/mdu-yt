@@ -3,7 +3,7 @@ import sys
 import os
 from PySide6 import QtCore
 import platform
-from src.utils.version import appversion
+from src.mduyt.utils.version import appversion
 # Determine the current platform
 current_platform = platform.system().lower()
 

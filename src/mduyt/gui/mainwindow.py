@@ -10,12 +10,14 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox, QSpinBox)
 from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
-from src.core.downloader import Downloader
-from src.gui.menubar import MenuBar
-from src.gui.multipledownloaddialog import MultipleDownloadDialog
-from src.core.updater import GitHubUpdater
-from src.utils.version import appversion
+from src.mduyt.core.downloader import Downloader
+from src.mduyt.gui.menubar import MenuBar
+from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog
+from src.mduyt.core.updater import GitHubUpdater
+from src.mduyt.utils.version import appversion
+from pathlib import Path
 # from ui_mainwindow import Ui_MainWindow
+
 
 def normalize_path(path):
     return path.replace(os.sep, '/')
@@ -166,7 +168,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("YouTube Downloader")
-        self.setFixedSize(1100, 600)
+        self.setFixedSize(800, 600)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         self.setWindowIcon(QIcon(":/app.ico"))
         self.setMenuBar(MenuBar(self))
@@ -235,7 +237,11 @@ class MainWindow(QMainWindow):
         option_layout.addStretch()
         layout.addLayout(option_layout)
 
-        self.setup_encoding_options(option_layout)
+        # self.setup_encoding_options(option_layout)
+        # encoding_layout = QHBoxLayout()
+        # self.setup_encoding_options(encoding_layout)
+        # layout.addLayout(encoding_layout)
+       
 
         # Add stop button
         self.stop_button = QPushButton("Stop")
@@ -407,8 +413,40 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Preferences", "Preferences dialog not implemented yet.")
 
     def show_about_dialog(self):
-        QMessageBox.about(self, "About YouTube Downloader",
-                        f"YouTube Downloader\nVersion {appversion}\nDeveloped by Nawapon Boonjua\n\nQt Version: {__version__}\nPython Version: {sys.version}\nyt-dlp version: 2024.08.06\n\nOS: {platform.platform()}")
+        # Load donators from the JSON file
+        try:
+            pth = Path(__file__)
+            file_path = os.path.join(pth.parent,"../"  'data', 'donator.json')
+            print(f"Attempting to open file: {file_path}")
+            with open(file_path, 'r') as f:
+                donator_data = json.load(f)
+                donators = donator_data.get('donators', [])
+                print(f"Successfully loaded donators from {file_path}")
+        except FileNotFoundError as e:
+            print(f"File not found error: {e}")
+            donators = []
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            donators = []
+
+        # Create the donator text with each name on a new line, wrapped in <b> tags for bold
+        donator_text = "<br>".join([f"{donator}" for donator in donators])
+
+        # Prepare the message box content using HTML formatting
+        about_message = (
+            f"<b>YouTube Downloader</b><br>"
+            f"Version {appversion}<br>"
+            f"Developed by Nawapon Boonjua<br><br>"
+            f"Qt Version: {__version__}<br>"
+            f"Python Version: {sys.version}<br>"
+            f"yt-dlp version: 2024.08.06<br><br>"
+            f"OS: {platform.platform()}<br><br>"
+            f"<b>Donators:</b><br>"  # Bold Donators title and list
+            f"{donator_text}"
+        )
+
+        # Show the message box
+        QMessageBox.about(self, "About YouTube Downloader", about_message)
 
     def check_for_updates(self):
         self.statusBar.showMessage("Checking for updates...")
@@ -429,7 +467,7 @@ class MainWindow(QMainWindow):
             self.start_update()
 
     def start_update(self):
-        self.statusBar.showMessage("Starting update...")
+        self.statusBar.showMessage("Downloading update...")
         threading.Thread(target=self._update_thread, daemon=True).start()
 
     def _update_thread(self):
@@ -488,22 +526,26 @@ class MainWindow(QMainWindow):
         fps = self.fps_combo.currentText() if (not is_audio and self.fps_checkbox.isChecked()) else None
         is_playlist = self.playlist_checkbox.isChecked()
         with_thumbnail = self.thumbnail_checkbox.isChecked()
-        
-        # Add encoding options
-        custom_encoding = self.encoding_checkbox.isChecked()
-        encoding_method = self.encoding_method_combo.currentText() if custom_encoding else None
 
+        # Fetch title before starting the download
+        title = self.downloader.fetch_title(url)
+        if title is None:
+            QMessageBox.warning(self, "Error", "Failed to fetch title. Download will not start.")
+            self.download_button.setEnabled(True)  # Re-enable the download button
+            self.stop_button.setEnabled(False)
+            return
+
+        # Start the download thread
         self.download_thread = threading.Thread(target=self.download_thread_function,
-                                                args=(url, is_audio, audio_format, resolution, fps, download_dir, 
-                                                      is_playlist, with_thumbnail, custom_encoding, encoding_method),
+                                                args=(url, is_audio, audio_format, resolution, fps, download_dir,
+                                                      is_playlist, with_thumbnail, title),
                                                 daemon=True)
         self.download_thread.start()
 
     def download_thread_function(self, url, is_audio, audio_format, resolution, fps, download_dir, 
-                                 is_playlist, with_thumbnail, custom_encoding, encoding_method):
+                                 is_playlist, with_thumbnail, title):
         self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, 
-                                 is_playlist, with_thumbnail, custom_encoding, encoding_method)
-
+                                 is_playlist, with_thumbnail, title)
     @Slot(float, str, str, str, int, int)
     def update_progress(self, progress, file_size, download_speed, eta, current_item, total_items):
         self.progress_bar.setValue(int(progress))
@@ -545,19 +587,36 @@ class MainWindow(QMainWindow):
         self.fps_combo.setEnabled(is_video)
         self.format_combo.setEnabled(not is_video)
 
-    @Slot(str, str, str)
-    def add_to_history(self, filename, file_path, file_type):
+    @Slot(str, str)
+    def add_to_history(self, file_path, title):
         item = QStandardItem()
+    
+        # Ensure the path and filename are normalized and handled correctly
+        selected_format = self.format_combo.currentText()  # Get the selected format as a string
+        normalized_filename = title  # Use the title fetched as the filename
+        normalized_path = os.path.dirname(self.normalize_unicode(file_path))
+    
+        # Determine the file type based on the selected format
+        if selected_format in ['wav', 'flac', 'm4a', 'mp3']:
+            file_type = "Audio"
+        else:
+            file_type = "Video"  # This assumes any other format is considered video
+    
         item_data = {
-            'filename': os.path.basename(filename),
-            'path': os.path.dirname(self.normalize_path(file_path)),
+            'filename': normalized_filename,
+            'path': normalized_path,
             'file_type': file_type
         }
+    
         item.setData(item_data, Qt.UserRole)
         self.history_model.insertRow(0, item)
         self.save_history()
-
+    
+    def normalize_unicode(self, text):
+        """This function ensures the filename and path are treated properly."""
+        return text.encode('utf-8').decode('utf-8')
     def normalize_path(self, path):
+        # Normalizes path based on the OS, ensuring compatibility with various encodings
         if sys.platform == "win32":
             return path.replace('\\', '/')
         return path
@@ -568,11 +627,13 @@ class MainWindow(QMainWindow):
             item_data = self.history_model.item(row).data(Qt.UserRole)
             history.append(item_data)
 
+        # Save history in UTF-8 format to support multi-language characters
         with open("download_history.json", "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
 
     def load_history(self):
         try:
+            # Load history ensuring UTF-8 encoding for multi-language support
             with open("download_history.json", "r", encoding="utf-8") as f:
                 history = json.load(f)
 

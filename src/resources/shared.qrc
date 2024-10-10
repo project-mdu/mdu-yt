@@ -6,5 +6,6 @@
         <file>vid.ico</file>
         <file>folder.svg</file>
         <file>style.qss</file>
+        <file>splash.png</file>
     </qresource>
 </RCC>
