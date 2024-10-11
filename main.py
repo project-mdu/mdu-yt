@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 from PySide6.QtWidgets import QApplication, QSplashScreen
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtCore import Qt
@@ -17,8 +18,6 @@ if __name__ == "__main__":
     splash_pix = QPixmap(":/splash.png")  # Load the splash image
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.show()
-
-    # Initialize the main window
     splash.showMessage("Loading modules...", Qt.AlignBottom | Qt.AlignLeft, Qt.white)
     window = MainWindow()
 

@@ -4,6 +4,7 @@ import os
 from PySide6 import QtCore
 import platform
 from src.mduyt.utils.version import appversion
+import sys
 # Determine the current platform
 current_platform = platform.system().lower()
 
@@ -28,9 +29,16 @@ else:  # Linux
     icon = os.path.join("icon", "linux", "icon.png")
 
 # Define include_files with platform-specific bin folder
-include_files = [
-    os.path.join(pyside6_path, "plugins", "platforms"),  # Ensure platform plugins are included
-] + bin_include
+if sys.platform == "win32":
+    include_files = [
+        os.path.join(pyside6_path, "plugins", "platforms"),  # Windows platform plugins
+    ] + bin_include
+elif sys.platform == "linux" or sys.platform == "darwin":  # Linux or macOS
+    include_files = [
+        os.path.join(pyside6_path, "Qt", "plugins", "platforms"),  # Linux/macOS platform plugins
+    ] + bin_include
+else:
+    raise RuntimeError("Unsupported platform")
 
 build_exe_options = {
     "packages": ["os", "sys", "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets"],
@@ -44,7 +52,7 @@ setup(
     version=appversion,
     description="Minimalist Youtube Downloader with Qt",
     options={"build_exe": build_exe_options},
-    executables=[Executable("mdu.py", base=base, icon=icon, target_name="mdu")],
+    executables=[Executable("main.py", base=base, icon=icon, target_name="mdu")],
 )
 
 # Additional platform-specific setup for macOS
