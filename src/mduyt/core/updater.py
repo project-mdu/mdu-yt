@@ -20,7 +20,7 @@ class GitHubUpdater:
     def __init__(self, current_version, is_portable=False):
         self.current_version = current_version
         self.is_portable = is_portable
-        self.api_url = "https://api.github.com/repos/Rinechxn/mdu-yt/releases/latest"
+        self.api_url = "https://api.github.com/repos/project-mdu/mdu-yt/releases/latest"
         self.signals = UpdaterSignals()
 
     def check_for_updates(self):
