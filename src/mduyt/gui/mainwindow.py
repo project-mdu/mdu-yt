@@ -14,7 +14,7 @@ from src.mduyt.core.downloader import Downloader
 from src.mduyt.gui.menubar import MenuBar
 from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.mduyt.core.updater import GitHubUpdater
-from src.mduyt.utils.version import appversion
+from src.mduyt.utils.version import appversion, appname
 from pathlib import Path
 # from ui_mainwindow import Ui_MainWindow
 
@@ -167,7 +167,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("YouTube Downloader")
+        self.setWindowTitle(appname)
         self.setFixedSize(800, 600)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         self.setWindowIcon(QIcon(":/app.ico"))
@@ -434,7 +434,7 @@ class MainWindow(QMainWindow):
 
         # Prepare the message box content using HTML formatting
         about_message = (
-            f"<b>YouTube Downloader</b><br>"
+            f"<b>{appname}</b><br>"
             f"Version {appversion}<br>"
             f"Developed by Nawapon Boonjua<br><br>"
             f"Qt Version: {__version__}<br>"
@@ -446,7 +446,7 @@ class MainWindow(QMainWindow):
         )
 
         # Show the message box
-        QMessageBox.about(self, "About YouTube Downloader", about_message)
+        QMessageBox.about(self, f"About {appname}", about_message)
 
     def check_for_updates(self):
         self.statusBar.showMessage("Checking for updates...")
