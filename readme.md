@@ -1,5 +1,5 @@
+![cover](https://github.com/user-attachments/assets/afbde9e1-eb0e-4296-ba79-d59ccc8767b7)
 
-![sdf4](https://github.com/user-attachments/assets/a84edc5c-f30d-4252-95de-18dae6cdac67)
 
 # YouTube Downloader
 
