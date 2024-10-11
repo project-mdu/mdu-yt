@@ -6,8 +6,8 @@ import tempfile
 import zipfile
 import shutil
 import subprocess
-from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import QObject, Signal
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QObject, Signal
 
 
 class UpdaterSignals(QObject):

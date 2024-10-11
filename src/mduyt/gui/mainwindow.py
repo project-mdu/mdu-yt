@@ -4,12 +4,12 @@ import json
 import threading
 import subprocess
 import platform
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
                                QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox, QSpinBox)
-from PySide6.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
+from PyQt5.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
 from src.mduyt.core.downloader import Downloader
 from src.mduyt.gui.menubar import MenuBar
 from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog

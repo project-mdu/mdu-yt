@@ -1,15 +1,15 @@
 from cx_Freeze import setup, Executable
 import sys
 import os
-from PySide6 import QtCore
+from PyQt5 import QtCore
 import platform
 from src.mduyt.utils.version import appversion
 import sys
 # Determine the current platform
 current_platform = platform.system().lower()
 
-# Collect PySide6 required libraries (Qt's dynamic libraries)
-pyside6_path = os.path.dirname(QtCore.__file__)
+# Collect PyQt5 required libraries (Qt's dynamic libraries)
+PyQt5_path = os.path.dirname(QtCore.__file__)
 
 # Specify the bin folder path
 bin_folder = os.path.join(os.getcwd(), 'bin')
@@ -31,17 +31,17 @@ else:  # Linux
 # Define include_files with platform-specific bin folder
 if sys.platform == "win32":
     include_files = [
-        os.path.join(pyside6_path, "plugins", "platforms"),  # Windows platform plugins
+        os.path.join(PyQt5_path, "plugins", "platforms"),  # Windows platform plugins
     ] + bin_include
 elif sys.platform == "linux" or sys.platform == "darwin":  # Linux or macOS
     include_files = [
-        os.path.join(pyside6_path, "Qt", "plugins", "platforms"),  # Linux/macOS platform plugins
+        os.path.join(PyQt5_path, "Qt", "plugins", "platforms"),  # Linux/macOS platform plugins
     ] + bin_include
 else:
     raise RuntimeError("Unsupported platform")
 
 build_exe_options = {
-    "packages": ["os", "sys", "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets"],
+    "packages": ["os", "sys", "PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets"],
     "include_files": include_files,
     "excludes": ["tkinter"],  # Exclude any unnecessary libraries
 }
@@ -63,8 +63,8 @@ if current_platform == "darwin":
     DATA_FILES = bin_include  # Include macOS-specific binaries
     OPTIONS = {
         'argv_emulation': True,
-        'packages': ['PySide6'],
-        'includes': ['PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets'],
+        'packages': ['PyQt5'],
+        'includes': ['PyQt5.QtCore', 'PyQt5.QtGui', 'PyQt5.QtWidgets'],
         'iconfile': icon,
     }
 

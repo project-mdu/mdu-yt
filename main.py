@@ -1,9 +1,9 @@
 import sys
 import os
 import platform
-from PySide6.QtWidgets import QApplication, QSplashScreen
-from PySide6.QtGui import QIcon, QPixmap
-from PySide6.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QSplashScreen
+from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtCore import Qt
 from src.mduyt.gui.mainwindow import MainWindow
 import src.mduyt.gui.resources_rc
 from src.mduyt.core.downloader import Downloader

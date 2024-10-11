@@ -1,7 +1,7 @@
 import os
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QTextEdit, QPushButton, QFileDialog, QMessageBox)
-from PySide6.QtCore import Qt, Signal
+from PyQt5.QtCore import Qt, Signal
 
 class MultipleDownloadDialog(QDialog):
     start_downloads = Signal(list)  # Signal to emit the list of URLs to download
@@ -61,7 +61,7 @@ class MultipleDownloadDialog(QDialog):
         self.accept()
 
 if __name__ == "__main__":
-    from PySide6.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QApplication
     import sys
 
     app = QApplication(sys.argv)

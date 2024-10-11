@@ -4,7 +4,7 @@ import subprocess
 import sys
 import platform
 import shutil
-from PySide6.QtCore import QObject, Signal
+from PyQt5.QtCore import QObject, Signal
 from pathlib import Path
 from env import root
 import yt_dlp
