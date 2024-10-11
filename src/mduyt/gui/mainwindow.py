@@ -16,6 +16,7 @@ from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.mduyt.core.updater import GitHubUpdater
 from src.mduyt.utils.version import appversion, appname
 from pathlib import Path
+from src.mduyt.data.donator import donators
 # from ui_mainwindow import Ui_MainWindow
 
 
@@ -187,7 +188,7 @@ class MainWindow(QMainWindow):
 
         url_layout = QHBoxLayout()
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Enter YouTube URL or playlist URL")
+        self.url_input.setPlaceholderText("Enter Youtube Video/Audio URL (other platform is auto video resolution download)")
         url_layout.addWidget(self.url_input)
         self.download_button = QPushButton("Download")
         self.download_button.clicked.connect(self.start_download)
@@ -320,6 +321,21 @@ class MainWindow(QMainWindow):
 
         self.load_history()
 
+        # Connect text change event
+        self.url_input.textChanged.connect(self.check_url)
+
+    def check_url(self):
+        url = self.url_input.text()
+        if "youtube.com" in url or "youtu.be" in url:
+            # Enable resolution and fps combo if YouTube URL
+            self.resolution_combo.setEnabled(True)
+            self.fps_combo.setEnabled(True)
+        else:
+            # Disable if it's not a YouTube URL
+            self.resolution_combo.setEnabled(False)
+            self.fps_combo.setEnabled(False)
+
+
     def toggle_options(self):
         is_video = self.video_radio.isChecked()
         self.resolution_combo.setEnabled(is_video)
@@ -413,21 +429,6 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Preferences", "Preferences dialog not implemented yet.")
 
     def show_about_dialog(self):
-        # Load donators from the JSON file
-        try:
-            pth = Path(__file__)
-            file_path = os.path.join(pth.parent,"../"  'data', 'donator.json')
-            print(f"Attempting to open file: {file_path}")
-            with open(file_path, 'r') as f:
-                donator_data = json.load(f)
-                donators = donator_data.get('donators', [])
-                print(f"Successfully loaded donators from {file_path}")
-        except FileNotFoundError as e:
-            print(f"File not found error: {e}")
-            donators = []
-        except json.JSONDecodeError as e:
-            print(f"JSON decode error: {e}")
-            donators = []
 
         # Create the donator text with each name on a new line, wrapped in <b> tags for bold
         donator_text = "<br>".join([f"{donator}" for donator in donators])
@@ -527,25 +528,23 @@ class MainWindow(QMainWindow):
         is_playlist = self.playlist_checkbox.isChecked()
         with_thumbnail = self.thumbnail_checkbox.isChecked()
 
-        # Fetch title before starting the download
-        title = self.downloader.fetch_title(url)
-        if title is None:
-            QMessageBox.warning(self, "Error", "Failed to fetch title. Download will not start.")
-            self.download_button.setEnabled(True)  # Re-enable the download button
-            self.stop_button.setEnabled(False)
-            return
+        # if title is None:
+        #     QMessageBox.warning(self, "Error", "Failed to fetch title. Download will not start.")
+        #     self.download_button.setEnabled(True)  # Re-enable the download button
+        #     self.stop_button.setEnabled(False)
+        #     return
 
         # Start the download thread
         self.download_thread = threading.Thread(target=self.download_thread_function,
                                                 args=(url, is_audio, audio_format, resolution, fps, download_dir,
-                                                      is_playlist, with_thumbnail, title),
+                                                      is_playlist, with_thumbnail),
                                                 daemon=True)
         self.download_thread.start()
 
     def download_thread_function(self, url, is_audio, audio_format, resolution, fps, download_dir, 
-                                 is_playlist, with_thumbnail, title):
+                                 is_playlist, with_thumbnail):
         self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, 
-                                 is_playlist, with_thumbnail, title)
+                                 is_playlist, with_thumbnail)
     @Slot(float, str, str, str, int, int)
     def update_progress(self, progress, file_size, download_speed, eta, current_item, total_items):
         self.progress_bar.setValue(int(progress))
@@ -587,34 +586,39 @@ class MainWindow(QMainWindow):
         self.fps_combo.setEnabled(is_video)
         self.format_combo.setEnabled(not is_video)
 
-    @Slot(str, str)
-    def add_to_history(self, file_path, title):
+    @Slot(str, str, str)
+    def add_to_history(self, filename, file_path, file_type):
         item = QStandardItem()
-    
-        # Ensure the path and filename are normalized and handled correctly
-        selected_format = self.format_combo.currentText()  # Get the selected format as a string
-        normalized_filename = title  # Use the title fetched as the filename
-        normalized_path = os.path.dirname(self.normalize_unicode(file_path))
-    
-        # Determine the file type based on the selected format
-        if selected_format in ['wav', 'flac', 'm4a', 'mp3']:
-            file_type = "Audio"
-        else:
-            file_type = "Video"  # This assumes any other format is considered video
-    
+
+        # Normalize the filename and path
+        normalized_filename = self.normalize_unicode(filename)
+        normalized_path = self.normalize_unicode(file_path)
+
+        # Ensure file_type is correct
+        if file_type == "Unknown":
+            file_type = self.determine_file_type(normalized_filename)
+
         item_data = {
             'filename': normalized_filename,
             'path': normalized_path,
             'file_type': file_type
         }
-    
+
         item.setData(item_data, Qt.UserRole)
         self.history_model.insertRow(0, item)
         self.save_history()
+
+    def determine_file_type(self, filename):
+        if any(filename.lower().endswith(ext) for ext in ['.mp4', '.webm', '.mkv', '.avi', '.mov']):
+            return "Video"
+        elif any(filename.lower().endswith(ext) for ext in ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a']):
+            return "Audio"
+        else:
+            return "Unknown"
+
+    def normalize_unicode(self, path):
+        return Path(path).as_posix()
     
-    def normalize_unicode(self, text):
-        """This function ensures the filename and path are treated properly."""
-        return text.encode('utf-8').decode('utf-8')
     def normalize_path(self, path):
         # Normalizes path based on the OS, ensuring compatibility with various encodings
         if sys.platform == "win32":
@@ -622,30 +626,26 @@ class MainWindow(QMainWindow):
         return path
 
     def save_history(self):
-        history = []
-        for row in range(self.history_model.rowCount()):
-            item_data = self.history_model.item(row).data(Qt.UserRole)
-            history.append(item_data)
+            history_data = []
+            for row in range(self.history_model.rowCount()):
+                item = self.history_model.item(row)
+                item_data = item.data(Qt.UserRole)
+                history_data.append(item_data)
 
-        # Save history in UTF-8 format to support multi-language characters
-        with open("download_history.json", "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
+            with open('history.json', 'w', encoding='utf-8') as f:
+                json.dump(history_data, f, ensure_ascii=False, indent=2)
 
     def load_history(self):
         try:
-            # Load history ensuring UTF-8 encoding for multi-language support
-            with open("download_history.json", "r", encoding="utf-8") as f:
-                history = json.load(f)
+            with open('history.json', 'r', encoding='utf-8') as f:
+                history_data = json.load(f)
 
-            for item in history:
-                list_item = QStandardItem()
-                list_item.setData(item, Qt.UserRole)
-                self.history_model.appendRow(list_item)
+            for item_data in history_data:
+                item = QStandardItem()
+                item.setData(item_data, Qt.UserRole)
+                self.history_model.appendRow(item)
         except FileNotFoundError:
-            pass
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON: {e}")
-            QMessageBox.warning(self, "Error", "Failed to load history due to invalid data.")
+            pass  # No history file exists yet
     @Slot()
     def clear_history(self):
         reply = QMessageBox.question(self, 'Clear History',

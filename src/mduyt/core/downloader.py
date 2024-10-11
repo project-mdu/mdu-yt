@@ -7,12 +7,13 @@ import shutil
 from PySide6.QtCore import QObject, Signal
 from pathlib import Path
 from env import root
-import yt_dlp
-import json  # Make sure to import the json module
+import unicodedata
+# import yt_dlp
+# import json  # Make sure to import the json module
 
 class DownloaderSignals(QObject):
     progress = Signal(float, str, str, str, int, int)
-    title_fetched = Signal(str)  # New signal for title fetching
+    title_fetched = Signal(str)
     file_downloaded = Signal(str, str, str)
     finished = Signal()
     error = Signal(str)
@@ -34,9 +35,9 @@ class Downloader(QObject):
     rootpath = root
     def get_workdir(self):
         if self.system == 'windows':
-            return os.path.join(self.rootpath,'..', 'bin', 'win')
+            return os.path.join(self.rootpath,'bin', 'win')
         elif self.system == 'darwin':
-            return os.path.join(self.rootpath,'..', 'bin', 'mac')
+            return os.path.join(self.rootpath,'bin', 'mac')
         elif self.system == 'linux':
             return '/usr/local/bin'  # Default location for user-installed binaries
         else:
@@ -86,38 +87,11 @@ class Downloader(QObject):
         print(f"Using bundled {binary_name} binary")
         return os.path.join(bin, 'linux', binary_name)
     
-    def fetch_title(self, url):
-        """Gets the video title from yt-dlp without downloading."""
-        try:
-            ydl_opts = {'quiet': True, 'no_warnings': True}
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extracting video info without downloading
-                info = ydl.extract_info(url, download=False)
-
-            # Convert the info dictionary to JSON format
-            info_json = json.dumps(info, indent=4)  # Pretty-print JSON with an indent of 4 spaces
-            print(info_json)  # Print the JSON output
-
-            title = info.get('title', None)  # Get the title from the info
-            if title:
-                self.signals.title_fetched.emit(title)  # Emit signal with the title
-            return title  # Return the title
-        except Exception as e:
-            self.signals.error.emit(f"Failed to fetch title: {str(e)}")  # Emit error signal
-            return None
-
-
-
-    def download(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail, get_title):
+    def download(self, url, is_audio, audio_format, resolution, fps, download_dir, is_playlist, with_thumbnail):
         self.download_dir = download_dir
         self.video_file = None
         self.audio_file = None
-
-        # Fetch title if get_title is True
-        if get_title:
-            title = self.fetch_title(url)
-            if title is None:
-                return  # If title fetching failed, exit early
+        self.is_audio_download = is_audio
 
         try:
             self.stop_flag = False
@@ -137,9 +111,14 @@ class Downloader(QObject):
             if is_audio:
                 cmd.extend(['-x', '--audio-format', audio_format])
             else:
-                format_string = f"bestvideo[height<={resolution}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
-                cmd.extend(['-f', format_string])
-                if fps:
+                # Check if the URL is for YouTube
+                if "youtube.com" in url or "youtu.be" in url:
+                    format_string = f"bestvideo[height<={resolution}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+                    cmd.extend(['-f', format_string])
+                else:
+                    pass
+                # Append FPS option if provided and relevant
+                if fps and ("youtube.com" in url or "youtu.be" in url):
                     cmd.append(f'--fps={fps}')
 
             cmd.append('--yes-playlist' if is_playlist else '--no-playlist')
@@ -171,10 +150,7 @@ class Downloader(QObject):
                 elif '[download] Destination:' in line:
                     self.parse_destination(line)
                 elif '[ExtractAudio] Destination:' in line or '[Merger] Merging formats into' in line:
-                    filename = os.path.basename(line.split('"')[-2]) if '"' in line else line.split(':')[-1].strip()
-                    file_path = os.path.join(download_dir, filename)
-                    file_type = "Audio" if is_audio else "Video"
-                    self.signals.file_downloaded.emit(filename, file_path, file_type)
+                    self.parse_destination(line)
 
             self.process.wait()
             if self.process.returncode != 0 and not self.stop_flag:
@@ -215,22 +191,48 @@ class Downloader(QObject):
 
         return progress, file_size, download_speed, eta
 
+
     def parse_destination(self, line):
-        match = re.search(r'\[download\] Destination: (.+)$', line)
+        match = re.search(r'\[(?:download|ExtractAudio|Merger)\] (?:Destination|Merging formats into): (.+)$', line)
         if match:
-            filename = match.group(1)
-            file_path = os.path.join(self.download_dir, filename)
+            file_path = match.group(1).strip()
             
-            # Check if it's a video file
-            if any(filename.endswith(ext) for ext in ['.mp4', '.webm', '.mkv']):
-                self.video_file = file_path
-            # Check if it's an audio file
-            elif any(filename.endswith(ext) for ext in ['.m4a', '.mp3', '.opus', '.wav']):
-                self.audio_file = file_path
+            # Remove quotes if present
+            if file_path.startswith('"') and file_path.endswith('"'):
+                file_path = file_path[1:-1]
             
-            # If we have both video and audio files, we can stop parsing
-            if self.video_file and self.audio_file:
-                return
+            # Ensure the file_path is absolute
+            if not os.path.isabs(file_path):
+                file_path = os.path.join(self.download_dir, file_path)
+            
+            # Normalize the path
+            file_path = os.path.normpath(file_path)
+            
+            # Get the filename and directory path separately
+            filename = os.path.basename(file_path)
+            dir_path = os.path.dirname(file_path)
+            
+            # Determine the file type
+            file_type = self.determine_file_type(filename)
+            
+            # Normalize the paths
+            normalized_filename = self.normalize_unicode(filename)
+            normalized_path = self.normalize_unicode(dir_path)
+            
+            # Emit the file_downloaded signal
+            self.signals.file_downloaded.emit(normalized_filename, normalized_path, file_type)
+
+    def determine_file_type(self, filename):
+        if self.is_audio_download:
+            return "Audio"
+        elif any(filename.lower().endswith(ext) for ext in ['.mp4', '.webm', '.mkv', '.avi', '.mov']):
+            return "Video"
+        else:
+            return "Unknown"
+
+    def normalize_unicode(self, text):
+        # Normalize the Unicode string using NFKC or NFC (Normalization Form)
+        return unicodedata.normalize('NFC', text)
 
     def processing_clip(self, output_file, codec='libx264', bitrate='5M', preset='fast'):
         if not self.video_file:

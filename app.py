@@ -20,13 +20,9 @@ if current_platform == "windows":
     base = "Win32GUI"
     icon = os.path.join("icon", "win", "icon.ico")
 elif current_platform == "darwin":
-    bin_include = [(os.path.join(bin_folder, 'mac'), 'bin')]
+    bin_include = [(os.path.join(bin_folder, 'mac'), 'bin/mac')]
     base = None
     icon = os.path.join("icon", "mac", "icon.icns")
-else:  # Linux
-    bin_include = [(os.path.join(bin_folder, 'linux'), 'bin')]
-    base = None
-    icon = os.path.join("icon", "linux", "icon.png")
 
 # Define include_files with platform-specific bin folder
 if sys.platform == "win32":
