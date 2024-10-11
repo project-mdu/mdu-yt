@@ -31,7 +31,7 @@ else:  # Linux
 # Define include_files with platform-specific bin folder
 if sys.platform == "win32":
     include_files = [
-        os.path.join(PyQt5_path, "plugins", "platforms"),  # Windows platform plugins
+        os.path.join(PyQt5_path, "Qt5", "plugins", "platforms"),  # Windows platform plugins
     ] + bin_include
 elif sys.platform == "linux" or sys.platform == "darwin":  # Linux or macOS
     include_files = [

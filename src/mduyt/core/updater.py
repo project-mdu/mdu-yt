@@ -7,14 +7,14 @@ import zipfile
 import shutil
 import subprocess
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore import QObject, Signal
+from PyQt5.QtCore import QObject, pyqtSignal
 
 
 class UpdaterSignals(QObject):
-    update_available = Signal(str)
-    update_progress = Signal(int)
-    update_completed = Signal()
-    update_error = Signal(str)
+    update_available = pyqtSignal(str)
+    update_progress = pyqtSignal(int)
+    update_completed = pyqtSignal()
+    update_error = pyqtSignal(str)
 
 class GitHubUpdater:
     def __init__(self, current_version, is_portable=False):

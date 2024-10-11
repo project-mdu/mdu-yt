@@ -1,10 +1,10 @@
 import os
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QTextEdit, QPushButton, QFileDialog, QMessageBox)
-from PyQt5.QtCore import Qt, Signal
+from PyQt5.QtCore import Qt, pyqtSignal
 
 class MultipleDownloadDialog(QDialog):
-    start_downloads = Signal(list)  # Signal to emit the list of URLs to download
+    start_downloads = pyqtSignal(list)  # Signal to emit the list of URLs to download
 
     def __init__(self, parent=None):
         super().__init__(parent)

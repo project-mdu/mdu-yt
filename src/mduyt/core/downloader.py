@@ -4,18 +4,18 @@ import subprocess
 import sys
 import platform
 import shutil
-from PyQt5.QtCore import QObject, Signal
+from PyQt5.QtCore import QObject, pyqtSignal
 from pathlib import Path
 from env import root
 import yt_dlp
 import json  # Make sure to import the json module
 
 class DownloaderSignals(QObject):
-    progress = Signal(float, str, str, str, int, int)
-    title_fetched = Signal(str)  # New signal for title fetching
-    file_downloaded = Signal(str, str, str)
-    finished = Signal()
-    error = Signal(str)
+    progress = pyqtSignal(float, str, str, str, int, int)
+    title_fetched = pyqtSignal(str)  # New signal for title fetching
+    file_downloaded = pyqtSignal(str, str, str)
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
 
 class Downloader(QObject):
     def __init__(self):
@@ -34,9 +34,9 @@ class Downloader(QObject):
     rootpath = root
     def get_workdir(self):
         if self.system == 'windows':
-            return os.path.join(self.rootpath,'..', 'bin', 'win')
+            return os.path.join(self.rootpath,'bin', 'win')
         elif self.system == 'darwin':
-            return os.path.join(self.rootpath,'..', 'bin', 'mac')
+            return os.path.join(self.rootpath,'bin', 'mac')
         elif self.system == 'linux':
             return '/usr/local/bin'  # Default location for user-installed binaries
         else:

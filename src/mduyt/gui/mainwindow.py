@@ -7,9 +7,9 @@ import platform
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLineEdit, QPushButton, QProgressBar, QLabel, QRadioButton,
                                QComboBox, QButtonGroup, QFileDialog, QMessageBox, QListView,
-                               QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox, QSpinBox)
-from PyQt5.QtCore import Qt, Slot, QSize, QPoint, QObject, Signal, __version__
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor, QAction
+                               QStyledItemDelegate, QStatusBar, QStyle, QMenu, QDialog, QCheckBox, QSpinBox, QAction)
+from PyQt5.QtCore import Qt, pyqtSlot, QSize, QPoint, QObject, pyqtSignal,QT_VERSION_STR
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon, QPalette, QColor
 from src.mduyt.core.downloader import Downloader
 from src.mduyt.gui.menubar import MenuBar
 from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog
@@ -160,8 +160,8 @@ class DeleteConfirmationDialog(QDialog):
         self.yes_button.clicked.connect(self.accept)
         self.no_button.clicked.connect(self.reject)
 
-# class DownloadSignals(QObject):
-#     file_downloaded = Signal(str, str, str)
+# class DownloadpyqtSignals(QObject):
+#     file_downloaded = pyqtSignal(str, str, str)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
 
         url_layout = QHBoxLayout()
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Enter YouTube URL or playlist URL")
+        self.url_input.setPlaceholderText("Enter Video URL or playlist URL")
         url_layout.addWidget(self.url_input)
         self.download_button = QPushButton("Download")
         self.download_button.clicked.connect(self.start_download)
@@ -309,7 +309,7 @@ class MainWindow(QMainWindow):
         self.playlist_progress_label = QLabel()
         layout.addWidget(self.playlist_progress_label)
 
-        # Connect signals
+        # Connect pyqtSignals
         self.video_radio.toggled.connect(self.toggle_options)
         self.audio_radio.toggled.connect(self.toggle_options)
         self.fps_checkbox.stateChanged.connect(self.toggle_fps_combo)
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
             f"<b>{appname}</b><br>"
             f"Version {appversion}<br>"
             f"Developed by Nawapon Boonjua<br><br>"
-            f"Qt Version: {__version__}<br>"
+            f"Qt Version: {QT_VERSION_STR}<br>"
             f"Python Version: {sys.version}<br>"
             f"yt-dlp version: 2024.08.06<br><br>"
             f"OS: {platform.platform()}<br><br>"
@@ -489,20 +489,20 @@ class MainWindow(QMainWindow):
 
 
 
-    @Slot()
+    @pyqtSlot()
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Download Folder")
         if folder:
             self.folder_path.setText(normalize_path(folder))
 
     
-    @Slot()
+    @pyqtSlot()
     def stop_download(self):
         self.downloader.stop()
         self.status_label.setText("Stopping download...")
         self.stop_button.setEnabled(False)
 
-    @Slot()
+    @pyqtSlot()
     def start_download(self):
         url = self.url_input.text()
         if not url:
@@ -546,7 +546,7 @@ class MainWindow(QMainWindow):
                                  is_playlist, with_thumbnail, title):
         self.downloader.download(url, is_audio, audio_format, resolution, fps, download_dir, 
                                  is_playlist, with_thumbnail, title)
-    @Slot(float, str, str, str, int, int)
+    @pyqtSlot(float, str, str, str, int, int)
     def update_progress(self, progress, file_size, download_speed, eta, current_item, total_items):
         self.progress_bar.setValue(int(progress))
         status = f"Downloading: {progress:.1f}%"
@@ -564,7 +564,7 @@ class MainWindow(QMainWindow):
             self.playlist_progress_label.setText("")
 
 
-    @Slot(str)
+    @pyqtSlot(str)
     def show_error(self, error_message):
         self.status_label.setText(f"Error: {error_message}")
         self.download_button.setEnabled(True)
@@ -572,7 +572,7 @@ class MainWindow(QMainWindow):
         self.playlist_progress_label.setText("")
         QMessageBox.critical(self, "Error", error_message)
 
-    @Slot()
+    @pyqtSlot()
     def download_finished(self):
         self.status_label.setText("Download completed!")
         self.download_button.setEnabled(True)
@@ -587,7 +587,7 @@ class MainWindow(QMainWindow):
         self.fps_combo.setEnabled(is_video)
         self.format_combo.setEnabled(not is_video)
 
-    @Slot(str, str)
+    @pyqtSlot(str, str)
     def add_to_history(self, file_path, title):
         item = QStandardItem()
     
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
             QMessageBox.warning(self, "Error", "Failed to load history due to invalid data.")
-    @Slot()
+    @pyqtSlot()
     def clear_history(self):
         reply = QMessageBox.question(self, 'Clear History',
                                      'Are you sure you want to clear the download history?',
@@ -659,7 +659,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText("History cleared")
 
 
-    @Slot(QPoint)
+    @pyqtSlot(QPoint)
     def show_context_menu(self, position):
         index = self.history_list.indexAt(position)
         if not index.isValid():

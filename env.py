@@ -1,3 +1,3 @@
 import os
 from pathlib import Path
-root = Path(__file__)
+root = os.getcwd()

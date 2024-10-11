@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QMenuBar, QMenu
-from PyQt5.QtGui import QIcon, QAction
+from PyQt5.QtWidgets import QMenuBar, QMenu, QAction
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
 class MenuBar(QMenuBar):
