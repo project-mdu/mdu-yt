@@ -34,15 +34,20 @@ class Downloader(QObject):
 
     rootpath = root
     def get_workdir(self):
-        if self.system == 'windows':
-            return os.path.join(self.rootpath,'bin', 'win')
-        elif self.system == 'darwin':
-            return os.path.join(self.rootpath,'bin', 'mac')
-        elif self.system == 'linux':
+        if self.system == 'windows':  # Windows
+            return os.path.join(self.rootpath, 'bin', 'win')
+        elif self.system == 'darwin':  # macOS
+            if getattr(sys, 'frozen', False):
+                # Inside the bundled .app, construct the absolute path to bin/mac
+                return os.path.abspath(os.path.join(self.rootpath, '..', 'Frameworks', 'bin', 'mac'))
+            else:
+                # During development or non-bundled execution
+                return os.path.join(self.rootpath, 'bin', 'mac')
+        elif self.system.startswith('linux'):  # Linux
             return '/usr/local/bin'  # Default location for user-installed binaries
         else:
             raise OSError(f"Unsupported operating system: {self.system}")
-    
+
     def get_yt_dlp_binary(self):
         if self.system == 'windows':
             return os.path.join(self.workdir, 'yt-dlp.exe')
@@ -95,7 +100,11 @@ class Downloader(QObject):
 
         try:
             self.stop_flag = False
-            cmd = [self.yt_dlp_binary, url, '--no-mtime', '--newline']
+            if self.system == 'windows':
+                cmd = [self.yt_dlp_binary, url, '--no-mtime', '--newline']
+            elif self.system == 'darwin':
+                cmd = [self.yt_dlp_binary, url, '--no-mtime', '--newline', f'--ffmpeg-location={self.workdir}']
+            print(self.yt_dlp_binary)
             print(self.yt_dlp_binary)
 
             cmd.extend(['-P', download_dir])

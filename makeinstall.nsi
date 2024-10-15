@@ -1,16 +1,16 @@
 ; NSIS Script for Youtube Downloader (Force Install)
 
 ; Define constants
-!define APPNAME "Youtube Downloader"
-!define APPVERSION "2024.09.25b5"
-!define INSTALLDIR "$LOCALAPPDATA\kaoniewji\mduyoutube"
+!define APPNAME "Media Downloader Utility"
+!define APPVERSION "2024.10.10"
+!define INSTALLDIR "$LOCALAPPDATA\kaoniewji\Media Downloader Utility"
 
 ; Include necessary NSIS headers
 !include "MUI2.nsh"
 
 ; General settings
 Name "${APPNAME}"
-OutFile "..\..\build\installer\mduinstall-20240925b5.exe"
+OutFile "mduinstall-20241010.exe"
 InstallDir "${INSTALLDIR}"
 RequestExecutionLevel user
 
@@ -31,7 +31,7 @@ Section "Install"
     DetailPrint "Installing, please wait..."
 
     ; Copy all files from the build directory
-    File /r "..\..\build\exe.win-amd64-3.12\*"
+    File /r "build\exe.win-amd64-3.12\*"
 
     ; Create shortcuts
     CreateDirectory "$SMPROGRAMS\${APPNAME}"

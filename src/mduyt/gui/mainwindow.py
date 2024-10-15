@@ -436,12 +436,12 @@ class MainWindow(QMainWindow):
         # Prepare the message box content using HTML formatting
         about_message = (
             f"<b>{appname}</b><br>"
-            f"Version {appversion}<br>"
-            f"Developed by Nawapon Boonjua<br><br>"
-            f"Qt Version: {__version__}<br>"
-            f"Python Version: {sys.version}<br>"
-            f"yt-dlp version: 2024.08.06<br><br>"
-            f"OS: {platform.platform()}<br><br>"
+            f"<b>Version</b> {appversion}<br>"
+            f"<b>Developed by</b> Nawapon Boonjua<br><br>"
+            f"<b>Qt Version:</b> {__version__}<br>"
+            f"<b>Python Version:</b> {sys.version}<br>"
+            f"<b>yt-dlp version:</b> 2024.08.06<br><br>"
+            f"<b>OS:</b> {platform.platform()}<br><br>"
             f"<b>Donators:</b><br>"  # Bold Donators title and list
             f"{donator_text}"
         )

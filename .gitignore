@@ -2,6 +2,7 @@
 build
 download_history.json
 buildnumber.json
+history.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
