@@ -14,7 +14,7 @@ from src.mduyt.core.downloader import Downloader
 from src.mduyt.gui.menubar import MenuBar
 from src.mduyt.gui.multipledownloaddialog import MultipleDownloadDialog
 from src.mduyt.core.updater import GitHubUpdater
-from src.mduyt.utils.version import appversion, appname
+from src.mduyt.utils.version import appversion, appname, ytdlp_version
 from pathlib import Path
 from src.mduyt.data.donator import donators
 # from ui_mainwindow import Ui_MainWindow
@@ -440,7 +440,7 @@ class MainWindow(QMainWindow):
             f"<b>Developed by</b> Nawapon Boonjua<br><br>"
             f"<b>Qt Version:</b> {__version__}<br>"
             f"<b>Python Version:</b> {sys.version}<br>"
-            f"<b>yt-dlp version:</b> 2024.08.06<br><br>"
+            f"<b>yt-dlp version:</b> {ytdlp_version}<br><br>"
             f"<b>OS:</b> {platform.platform()}<br><br>"
             f"<b>Donators:</b><br>"  # Bold Donators title and list
             f"{donator_text}"

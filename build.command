@@ -1,1 +1,0 @@
-python ./scripts/python/autobuild.py mac
